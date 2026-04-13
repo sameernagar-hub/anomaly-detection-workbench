@@ -5,13 +5,13 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="anomaly-detection-workbench",
-    version="0.0.2",
-    author="Thijs van Ede",
-    author_email="t.s.vanede@utwente.nl",
-    description="Sequence-based anomaly detection workbench for system-log experiments",
+    version="1.0.0",
+    author="Sameer Nagar",
+    author_email="nagarsam8989@gmail.com",
+    description="Drift-robust, argument-aware anomaly detection workbench with analysis, live monitoring, evaluation, and run archiving",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/example/anomaly-detection-workbench",
+    url="https://github.com/sameernagar-hub/anomaly-detection-workbench",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
