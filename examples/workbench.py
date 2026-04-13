@@ -10,15 +10,19 @@ import time
 from collections import Counter, deque
 from dataclasses import asdict, dataclass
 from pathlib import Path
+import sys
 from typing import Any, Deque, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import torch
 import torch.nn as nn
 
+BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from anomaly_detection import SequenceAnomalyModel
 
-
-BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 ARTIFACT_DIR = BASE_DIR / "artifacts"
 ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)

@@ -1,5 +1,7 @@
-numpy==1.22.0
-torch_train==0.0.1
-torch==1.4.0
-argformat==0.0.1
-scikit_learn==0.23.1
+numpy==1.26.4
+torch-train==0.0.3
+torch==2.10.0
+argformat==0.0.3
+scikit-learn==1.8.0
+tqdm==4.67.1
+pandas==3.0.2
