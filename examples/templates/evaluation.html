@@ -14,12 +14,12 @@
 
     <div class="eval-topline">
       <article class="compare-stat">
-        <span>Baseline accuracy</span>
+        <span>Baseline accuracy <button class="info-dot" type="button" data-tooltip="Accuracy of the baseline model on the current benchmark dataset." aria-label="Explain baseline accuracy">?</button></span>
         <strong id="evalBaselineAccuracy">-</strong>
         <small>{{ bootstrap_data.model_names.baseline.label }}</small>
       </article>
       <article class="compare-stat accent">
-        <span>Improved accuracy</span>
+        <span>Improved accuracy <button class="info-dot" type="button" data-tooltip="Accuracy of the improved argument-aware model on the current benchmark dataset." aria-label="Explain improved accuracy">?</button></span>
         <strong id="evalImprovedAccuracy">-</strong>
         <small>{{ bootstrap_data.model_names.improved.label }}</small>
       </article>
@@ -46,7 +46,7 @@
       <div class="section-head">
         <div>
           <div class="eyebrow">Metric service output</div>
-          <h2>Accuracy, precision, recall, F1, and false-positive rate</h2>
+          <h2>Accuracy, precision, recall, F1, and false-positive rate <button class="info-dot" type="button" data-tooltip="Detailed comparison of the main benchmark metrics used to evaluate both models." aria-label="Explain metric service output">?</button></h2>
         </div>
       </div>
       <div class="metric-rows" id="metricRows"></div>
@@ -56,7 +56,7 @@
       <div class="section-head">
         <div>
           <div class="eyebrow">Cross-host service output</div>
-          <h2>Fold-by-fold accuracy comparison</h2>
+          <h2>Fold-by-fold accuracy comparison <button class="info-dot" type="button" data-tooltip="Per-host-group proxy folds used to estimate how the models behave across different host-like segments." aria-label="Explain fold-by-fold accuracy comparison">?</button></h2>
         </div>
       </div>
       <div class="fold-rows" id="foldRows"></div>

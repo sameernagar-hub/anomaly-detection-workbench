@@ -9,9 +9,9 @@
       </div>
       <div class="control-row wrap">
         <a class="ghost" href="{{ url_for('history_page') }}">Back to history</a>
-        <button class="ghost" id="exportCsvBtn">Export CSV</button>
-        <button class="ghost" id="exportJsonBtn">Export JSON</button>
-        <button class="ghost" id="exportHtmlBtn">Export HTML</button>
+        <button class="ghost" id="exportCsvBtn" data-tooltip="Download the current run in comma-separated values format." aria-label="Explain export CSV">Export CSV</button>
+        <button class="ghost" id="exportJsonBtn" data-tooltip="Download the current run in structured JSON format." aria-label="Explain export JSON">Export JSON</button>
+        <button class="ghost" id="exportHtmlBtn" data-tooltip="Download the current run as a standalone HTML report." aria-label="Explain export HTML">Export HTML</button>
       </div>
     </div>
     <div class="run-meta-grid" id="runMeta"></div>
@@ -19,7 +19,7 @@
 
   <section class="metric-ribbon">
     <article class="metric-card">
-      <span>Windows analyzed</span>
+      <span>Windows analyzed <button class="info-dot" type="button" data-tooltip="The total number of prediction windows generated for this archived run." aria-label="Explain windows analyzed">?</button></span>
       <strong id="metricWindows">0</strong>
       <small>Saved report volume</small>
     </article>
@@ -56,7 +56,7 @@
         </div>
         <div class="runway-grid">
           <article class="runway-tile">
-            <span>Active report</span>
+            <span>Active report <button class="info-dot" type="button" data-tooltip="The archived run currently loaded in the run details page." aria-label="Explain active report">?</button></span>
             <strong id="currentReportName">No report yet</strong>
             <small id="currentReportMode">Compare mode</small>
           </article>
@@ -88,9 +88,9 @@
         <div class="chart-card expert-chart">
           <svg id="trendChart" viewBox="0 0 760 280" preserveAspectRatio="none"></svg>
           <div class="chart-legend">
-            <span><i class="legend-swatch baseline"></i>Baseline Sentinel</span>
-            <span><i class="legend-swatch improved"></i>Apex Insight</span>
-            <span><i class="legend-swatch truth"></i>Attack label</span>
+            <span><i class="legend-swatch baseline"></i>Baseline Sentinel <button class="info-dot" type="button" data-tooltip="Line showing anomaly scores from the baseline model across the saved timeline." aria-label="Explain baseline timeline">?</button></span>
+            <span><i class="legend-swatch improved"></i>Apex Insight <button class="info-dot" type="button" data-tooltip="Line showing anomaly scores from the improved model across the saved timeline." aria-label="Explain improved timeline">?</button></span>
+            <span><i class="legend-swatch truth"></i>Attack label <button class="info-dot" type="button" data-tooltip="Markers showing windows with attack labels in the underlying sample or dataset." aria-label="Explain attack label markers">?</button></span>
           </div>
         </div>
       </section>
@@ -107,7 +107,7 @@
         </div>
         <div class="filter-row">
           <div class="filter-group">
-            <label class="field-label" for="rowFilter">Window filter</label>
+            <label class="field-label" for="rowFilter">Window filter <button class="info-dot" type="button" data-tooltip="Limits the evidence table to selected subsets such as anomalies, disagreements, or attack-labeled windows." aria-label="Explain window filter">?</button></label>
             <select id="rowFilter">
               <option value="all">All windows</option>
               <option value="anomaly">Any anomaly</option>

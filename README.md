@@ -19,6 +19,7 @@ This project is not just a model demo. It is a working multi-page analysis appli
 - compare a baseline sequence model against an improved argument-aware model
 - save, reopen, and export completed runs
 - inspect benchmark and proxy cross-host evaluation results in a separate service view
+- open a dedicated FAQ / Docs window for in-app guidance and troubleshooting
 
 ---
 
@@ -74,6 +75,7 @@ http://127.0.0.1:5000/overview
 - [Features](#features)
 - [App Services](#app-services)
 - [Typical Workflow](#typical-workflow)
+- [FAQ / Docs Service](#faq--docs-service)
 - [Project Structure](#project-structure)
 - [Setup And Installation](#setup-and-installation)
 - [How To Run The App](#how-to-run-the-app)
@@ -103,6 +105,8 @@ http://127.0.0.1:5000/overview
 - live file-tail monitoring
 - replay-driven live demo flow
 - archived run history with dedicated result pages
+- in-app tooltip guidance across controls and metrics
+- FAQ / Docs window for service explanations and common questions
 
 ### Review And Reporting
 
@@ -124,6 +128,7 @@ The web app is now organized into separate service windows so each workflow has 
 | `Analysis Service` | Runs text, upload, and sample analysis | New saved run |
 | `Live Monitoring Service` | Tails a growing file or replay stream | Live-updating result stream |
 | `Evaluation Service` | Compares models using benchmark metrics | Metrics + cross-host comparison |
+| `FAQ / Docs` | Explains services, metrics, workflows, and troubleshooting | In-app documentation |
 | `Run Archive` | Lists saved runs | Run history |
 | `Run Details` | Opens one archived run | Frozen chart, evidence table, exports |
 
@@ -139,6 +144,24 @@ The web app is now organized into separate service windows so each workflow has 
 6. Use `Live Monitoring Service` when you want a continuously updating stream.
 7. Archive a live snapshot when you want that state preserved as a normal run.
 8. Open `Evaluation Service` to review benchmark metrics separately from operational analysis.
+9. Use `FAQ / Docs` any time you need definitions, workflow help, or troubleshooting guidance.
+
+---
+
+## FAQ / Docs Service
+
+The app includes a dedicated documentation window so users do not have to guess what key terms and workflows mean.
+
+This page covers:
+
+- getting started workflow
+- service-by-service explanations
+- metric definitions
+- live monitoring behavior
+- common questions
+- troubleshooting guidance
+
+The interface also includes inline `?` help markers across major controls, metrics, filters, exports, and technical labels.
 
 ---
 
@@ -236,6 +259,7 @@ http://127.0.0.1:5000/
 - `/analyze`
 - `/live`
 - `/evaluation`
+- `/docs`
 - `/history`
 - `/runs/<run_id>`
 

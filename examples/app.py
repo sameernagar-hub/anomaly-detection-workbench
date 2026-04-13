@@ -551,6 +551,15 @@ def evaluation_page() -> str:
     )
 
 
+@app.route("/docs")
+def docs_page() -> str:
+    return render_template(
+        "docs.html",
+        active_page="docs",
+        bootstrap_data=_bootstrap_payload("docs"),
+    )
+
+
 @app.route("/history")
 def history_page() -> str:
     return render_template(

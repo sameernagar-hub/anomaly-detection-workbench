@@ -20,17 +20,17 @@
       <div class="panel-kicker">Service status</div>
       <div class="hero-status-grid">
         <div class="status-tile">
-          <span>Bootstrap</span>
+          <span>Bootstrap <button class="info-dot" type="button" data-tooltip="Loads models, prepares startup artifacts, and creates the initial ready state for the app." aria-label="Explain bootstrap">?</button></span>
           <strong id="bootstrapState">Starting</strong>
           <small id="bootstrapMessage">Loading models and startup sample.</small>
         </div>
         <div class="status-tile">
-          <span>Evaluation</span>
+          <span>Evaluation <button class="info-dot" type="button" data-tooltip="Background benchmark process that computes comparison metrics for the baseline and improved models." aria-label="Explain evaluation status">?</button></span>
           <strong id="evaluationState">Pending</strong>
           <small id="evaluationMessage">Benchmark snapshot not ready yet.</small>
         </div>
         <div class="status-tile">
-          <span>Live status</span>
+          <span>Live status <button class="info-dot" type="button" data-tooltip="Shows whether the live-monitor service is currently idle, starting, or processing a monitored file." aria-label="Explain live status">?</button></span>
           <strong id="liveState">Idle</strong>
           <small id="liveHint">Replay or manual path</small>
         </div>
@@ -45,7 +45,7 @@
 
   <section class="metric-ribbon">
     <article class="metric-card">
-      <span>Windows analyzed</span>
+      <span>Windows analyzed <button class="info-dot" type="button" data-tooltip="The number of prediction windows generated from the selected run after applying the sequence window size." aria-label="Explain windows analyzed">?</button></span>
       <strong id="metricWindows">0</strong>
       <small>Current saved run</small>
     </article>
@@ -86,7 +86,7 @@
 
         <div class="runway-grid">
           <article class="runway-tile">
-            <span>Active report</span>
+            <span>Active report <button class="info-dot" type="button" data-tooltip="The most recently archived run that is currently summarized on the overview page." aria-label="Explain active report">?</button></span>
             <strong id="currentReportName">No report yet</strong>
             <small id="currentReportMode">Compare mode</small>
           </article>
@@ -101,7 +101,7 @@
             <small id="latestImprovedVerdict">Awaiting prediction</small>
           </article>
           <article class="runway-tile">
-            <span>Drift posture</span>
+            <span>Drift posture <button class="info-dot" type="button" data-tooltip="A lightweight drift signal that indicates whether recent sequence behavior looks stable or shifted." aria-label="Explain drift posture">?</button></span>
             <strong id="driftStatus">-</strong>
             <small id="driftMessage">Need analysis to evaluate drift.</small>
           </article>

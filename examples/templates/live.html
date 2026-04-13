@@ -10,17 +10,17 @@
             <h1>Replay and file-tail monitoring</h1>
           </div>
           <div class="control-row wrap">
-            <button class="ghost" id="saveLiveBtn">Archive current snapshot</button>
+            <button class="ghost" id="saveLiveBtn" data-tooltip="Copies the current live state into the run archive so you can review it later as a normal run." aria-label="Explain archive current snapshot">Archive current snapshot</button>
           </div>
         </div>
 
         <label class="field-label" for="livePath">Monitored file path <button class="info-dot" type="button" data-tooltip="Point this service at a local log file that is being appended over time." aria-label="Explain monitored file path">?</button></label>
         <input type="text" id="livePath" placeholder="C:\path\to\trace.log">
         <div class="control-row wrap">
-          <button class="primary" id="startLiveBtn">Start monitor</button>
-          <button class="ghost" id="stopLiveBtn">Stop monitor</button>
-          <button class="ghost" id="startReplayBtn">Start replay service</button>
-          <button class="ghost" id="stopReplayBtn">Stop replay</button>
+          <button class="primary" id="startLiveBtn" data-tooltip="Starts monitoring the file path shown above for new lines." aria-label="Explain start monitor">Start monitor</button>
+          <button class="ghost" id="stopLiveBtn" data-tooltip="Stops the live-monitor worker for the current file path." aria-label="Explain stop monitor">Stop monitor</button>
+          <button class="ghost" id="startReplayBtn" data-tooltip="Streams a prepared sample into the live monitor so you can watch the graph update." aria-label="Explain start replay service">Start replay service</button>
+          <button class="ghost" id="stopReplayBtn" data-tooltip="Stops the replay stream without deleting archived snapshots." aria-label="Explain stop replay">Stop replay</button>
         </div>
         <div class="status-stack">
           <div class="status-blade" id="liveStatus">Live monitoring idle.</div>
@@ -33,7 +33,7 @@
         <div class="section-head">
           <div>
             <div class="eyebrow">Live result stream</div>
-            <h2>Current timeline</h2>
+            <h2>Current timeline <button class="info-dot" type="button" data-tooltip="Shows the current live anomaly-score timeline. This view updates as the monitored file grows." aria-label="Explain current timeline">?</button></h2>
           </div>
         </div>
         <div class="chart-card expert-chart">
@@ -52,7 +52,7 @@
         <div class="section-head">
           <div>
             <div class="eyebrow">Replay input library</div>
-            <h2>Prepared sources</h2>
+            <h2>Prepared sources <button class="info-dot" type="button" data-tooltip="Prepared sample paths you can use for replay without typing a manual file path." aria-label="Explain prepared sources">?</button></h2>
           </div>
         </div>
         <div class="path-list" id="pathList"></div>
@@ -62,7 +62,7 @@
         <div class="section-head">
           <div>
             <div class="eyebrow">Recent live snapshots</div>
-            <h2>Monitor history</h2>
+            <h2>Monitor history <button class="info-dot" type="button" data-tooltip="Recent live updates captured by the monitoring service during the current session." aria-label="Explain monitor history">?</button></h2>
           </div>
         </div>
         <div class="report-list" id="liveHistory"></div>

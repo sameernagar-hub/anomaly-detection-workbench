@@ -19,20 +19,20 @@
 
     <div class="studio-grid">
       <div class="composer-panel">
-        <label class="field-label" for="logText">Input text service</label>
+        <label class="field-label" for="logText">Input text service <button class="info-dot" type="button" data-tooltip="Paste structured log lines here to run analysis without uploading a file." aria-label="Explain input text service">?</button></label>
         <textarea id="logText"></textarea>
         <div class="control-row wrap">
-          <button class="primary" id="analyzeTextBtn">Run text analysis</button>
-          <button class="ghost" id="loadFeaturedBtn">Load sample text</button>
-          <button class="ghost" id="loadDefaultBtn">Load default input</button>
+          <button class="primary" id="analyzeTextBtn" data-tooltip="Runs inference on the text currently shown in the input area and saves the result as a run." aria-label="Explain run text analysis">Run text analysis</button>
+          <button class="ghost" id="loadFeaturedBtn" data-tooltip="Loads the main prepared demonstration sample into the text input area." aria-label="Explain load sample text">Load sample text</button>
+          <button class="ghost" id="loadDefaultBtn" data-tooltip="Loads the built-in fallback sample text bundled with the project." aria-label="Explain load default input">Load default input</button>
         </div>
       </div>
 
       <div class="utility-panel">
         <div class="upload-block inset-card">
-          <label class="field-label" for="uploadFile">File analysis service</label>
+          <label class="field-label" for="uploadFile">File analysis service <button class="info-dot" type="button" data-tooltip="Upload a local log file to analyze it and save the result as a new run." aria-label="Explain file analysis service">?</button></label>
           <input type="file" id="uploadFile" accept=".txt,.log,.csv">
-          <button class="ghost" id="analyzeUploadBtn">Run file analysis</button>
+          <button class="ghost" id="analyzeUploadBtn" data-tooltip="Runs inference on the currently selected upload file." aria-label="Explain run file analysis">Run file analysis</button>
         </div>
 
         <div class="status-blade" id="analysisStatus">Choose a sample source, paste text, or upload a file to create a run.</div>
@@ -47,7 +47,7 @@
     <div class="section-head">
       <div>
         <div class="eyebrow">Prepared inputs</div>
-        <h2>Sample input library</h2>
+        <h2>Sample input library <button class="info-dot" type="button" data-tooltip="Prepared sample traces that let you test the app quickly without providing your own file." aria-label="Explain sample input library">?</button></h2>
       </div>
     </div>
     <div class="scenario-grid" id="scenarioGrid"></div>

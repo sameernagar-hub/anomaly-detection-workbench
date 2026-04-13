@@ -67,6 +67,89 @@
     });
   }
 
+  function initTooltips() {
+    const tooltip = document.createElement("div");
+    tooltip.className = "global-tooltip";
+    tooltip.setAttribute("role", "tooltip");
+    tooltip.hidden = true;
+    document.body.appendChild(tooltip);
+
+    let activeTrigger = null;
+
+    function positionTooltip(trigger) {
+      const rect = trigger.getBoundingClientRect();
+      tooltip.style.left = "0px";
+      tooltip.style.top = "0px";
+      tooltip.hidden = false;
+
+      const tipRect = tooltip.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      let left = rect.left + (rect.width / 2) - (tipRect.width / 2);
+      left = Math.max(12, Math.min(left, viewportWidth - tipRect.width - 12));
+
+      let top = rect.top - tipRect.height - 12;
+      let placement = "top";
+      if (top < 12) {
+        top = rect.bottom + 12;
+        placement = "bottom";
+      }
+      if (top + tipRect.height > viewportHeight - 12) {
+        top = Math.max(12, viewportHeight - tipRect.height - 12);
+      }
+
+      tooltip.style.left = `${left + window.scrollX}px`;
+      tooltip.style.top = `${top + window.scrollY}px`;
+      tooltip.dataset.placement = placement;
+    }
+
+    function showTooltip(trigger) {
+      const text = trigger.dataset.tooltip;
+      if (!text) return;
+      activeTrigger = trigger;
+      tooltip.textContent = text;
+      tooltip.hidden = false;
+      positionTooltip(trigger);
+      trigger.setAttribute("aria-expanded", "true");
+    }
+
+    function hideTooltip() {
+      if (activeTrigger) {
+        activeTrigger.setAttribute("aria-expanded", "false");
+      }
+      activeTrigger = null;
+      tooltip.hidden = true;
+    }
+
+    document.querySelectorAll("[data-tooltip]").forEach((trigger) => {
+      trigger.setAttribute("tabindex", trigger.getAttribute("tabindex") || "0");
+      trigger.setAttribute("aria-haspopup", "true");
+      trigger.setAttribute("aria-expanded", "false");
+      trigger.addEventListener("mouseenter", () => showTooltip(trigger));
+      trigger.addEventListener("focus", () => showTooltip(trigger));
+      trigger.addEventListener("mouseleave", hideTooltip);
+      trigger.addEventListener("blur", hideTooltip);
+      trigger.addEventListener("click", (event) => {
+        if (trigger.classList.contains("info-dot")) {
+          event.preventDefault();
+          if (activeTrigger === trigger && !tooltip.hidden) hideTooltip();
+          else showTooltip(trigger);
+        }
+      });
+    });
+
+    document.addEventListener("click", (event) => {
+      if (event.target.closest("[data-tooltip]")) return;
+      hideTooltip();
+    });
+    window.addEventListener("scroll", () => {
+      if (activeTrigger && !tooltip.hidden) positionTooltip(activeTrigger);
+    }, { passive: true });
+    window.addEventListener("resize", () => {
+      if (activeTrigger && !tooltip.hidden) positionTooltip(activeTrigger);
+    });
+  }
+
   async function fetchJSON(url, options) {
     const response = await fetch(url, options);
     const payload = await response.json();
@@ -312,6 +395,7 @@
     openExport,
     initTheme,
     initPageMotion,
+    initTooltips,
     renderTrendChart,
     applyRunSummaryToMetrics,
     applyRunDetail,
@@ -324,4 +408,5 @@
 
   initTheme();
   initPageMotion();
+  initTooltips();
 })();
