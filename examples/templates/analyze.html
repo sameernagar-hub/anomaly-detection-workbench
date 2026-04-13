@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Analyze | CSUF Anomaly Detection Workbench{% endblock %}
+{% block content %}
+  <section class="glass-card section-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Analysis Service</div>
+        <h1>Create a new run</h1>
+      </div>
+      <div class="mode-switch">
+        <label class="field-label" for="analysisMode">Result mode <button class="info-dot" type="button" data-tooltip="Choose whether the saved run should show both models together or only one model at a time." aria-label="Explain result mode">?</button></label>
+        <select id="analysisMode">
+          <option value="compare">Dual Command View</option>
+          <option value="deeplog">Baseline Sentinel only</option>
+          <option value="report">Apex Insight only</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="studio-grid">
+      <div class="composer-panel">
+        <label class="field-label" for="logText">Input text service</label>
+        <textarea id="logText"></textarea>
+        <div class="control-row wrap">
+          <button class="primary" id="analyzeTextBtn">Run text analysis</button>
+          <button class="ghost" id="loadFeaturedBtn">Load sample text</button>
+          <button class="ghost" id="loadDefaultBtn">Load default input</button>
+        </div>
+      </div>
+
+      <div class="utility-panel">
+        <div class="upload-block inset-card">
+          <label class="field-label" for="uploadFile">File analysis service</label>
+          <input type="file" id="uploadFile" accept=".txt,.log,.csv">
+          <button class="ghost" id="analyzeUploadBtn">Run file analysis</button>
+        </div>
+
+        <div class="status-blade" id="analysisStatus">Choose a sample source, paste text, or upload a file to create a run.</div>
+        <div class="report-card subtle">
+          Every analysis request creates a saved run record and opens a dedicated run details page.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="glass-card section-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Prepared inputs</div>
+        <h2>Sample input library</h2>
+      </div>
+    </div>
+    <div class="scenario-grid" id="scenarioGrid"></div>
+  </section>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='analyze.js') }}"></script>
+{% endblock %}

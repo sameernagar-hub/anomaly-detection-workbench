@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Evaluation | CSUF Anomaly Detection Workbench{% endblock %}
+{% block content %}
+  <section class="glass-card section-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Evaluation Service</div>
+        <h1>Benchmark and comparison metrics</h1>
+      </div>
+      <div class="section-actions">
+        <button class="ghost" id="refreshEvaluation">Refresh evaluation</button>
+      </div>
+    </div>
+
+    <div class="eval-topline">
+      <article class="compare-stat">
+        <span>Baseline accuracy</span>
+        <strong id="evalBaselineAccuracy">-</strong>
+        <small>{{ bootstrap_data.model_names.baseline.label }}</small>
+      </article>
+      <article class="compare-stat accent">
+        <span>Improved accuracy</span>
+        <strong id="evalImprovedAccuracy">-</strong>
+        <small>{{ bootstrap_data.model_names.improved.label }}</small>
+      </article>
+      <article class="compare-stat">
+        <span>Metric wins <button class="info-dot" type="button" data-tooltip="Counts how many tracked metrics the improved model wins against the baseline. Lower false-positive rate counts as a win." aria-label="Explain metric wins">?</button></span>
+        <strong id="evalMetricWins">-</strong>
+        <small>Tracked benchmark metrics</small>
+      </article>
+      <article class="compare-stat">
+        <span>Cross-host delta <button class="info-dot" type="button" data-tooltip="Difference between average proxy host-group accuracy for the improved model and the baseline model." aria-label="Explain cross-host delta">?</button></span>
+        <strong id="evalCrossDelta">-</strong>
+        <small>Proxy host-group benchmark</small>
+      </article>
+    </div>
+
+    <div class="status-stack">
+      <div class="status-blade" id="evaluationHeadline">Waiting for benchmark snapshot.</div>
+      <div class="status-blade subtle" id="evaluationMessage">The benchmark worker will populate this page once ready.</div>
+    </div>
+  </section>
+
+  <section class="benchmark-grid">
+    <section class="glass-card section-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Metric service output</div>
+          <h2>Accuracy, precision, recall, F1, and false-positive rate</h2>
+        </div>
+      </div>
+      <div class="metric-rows" id="metricRows"></div>
+    </section>
+
+    <section class="glass-card section-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Cross-host service output</div>
+          <h2>Fold-by-fold accuracy comparison</h2>
+        </div>
+      </div>
+      <div class="fold-rows" id="foldRows"></div>
+    </section>
+  </section>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='evaluation.js') }}"></script>
+{% endblock %}

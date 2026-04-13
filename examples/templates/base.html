@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}CSUF Anomaly Detection Workbench{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='luxury.css') }}">
+</head>
+<body data-theme="campus">
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
+  <header class="site-header">
+    <a class="brand-lockup brand-link" href="{{ url_for('overview') }}">
+      <div class="brand-mark">AD</div>
+      <div>
+        <div class="eyebrow">CSUF Final Project</div>
+        <strong>Anomaly Detection Services</strong>
+      </div>
+    </a>
+
+    <nav class="top-nav" aria-label="Primary">
+      <a class="nav-link {% if active_page == 'overview' %}active{% endif %}" href="{{ url_for('overview') }}" data-nav-link>Overview</a>
+      <a class="nav-link {% if active_page == 'analyze' %}active{% endif %}" href="{{ url_for('analyze_page') }}" data-nav-link>Analysis Service</a>
+      <a class="nav-link {% if active_page == 'live' %}active{% endif %}" href="{{ url_for('live_page') }}" data-nav-link>Live Monitor</a>
+      <a class="nav-link {% if active_page == 'evaluation' %}active{% endif %}" href="{{ url_for('evaluation_page') }}" data-nav-link>Evaluation Service</a>
+      <a class="nav-link {% if active_page == 'history' %}active{% endif %}" href="{{ url_for('history_page') }}" data-nav-link>Run Archive</a>
+    </nav>
+
+    <div class="header-actions">
+      <label class="theme-control" for="themeSelect">
+        <span>Theme</span>
+        <select id="themeSelect">
+          <option value="campus">Campus</option>
+          <option value="midnight">Midnight</option>
+          <option value="signal">Signal</option>
+        </select>
+      </label>
+    </div>
+  </header>
+
+  <main class="page-shell page-stack">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script id="bootstrap-data" type="application/json">{{ bootstrap_data|tojson }}</script>
+  <script src="{{ url_for('static', filename='workbench_shared.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

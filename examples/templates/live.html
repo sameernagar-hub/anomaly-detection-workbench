@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Live Monitor | CSUF Anomaly Detection Workbench{% endblock %}
+{% block content %}
+  <section class="content-grid">
+    <div class="main-column">
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Live Monitoring Service</div>
+            <h1>Replay and file-tail monitoring</h1>
+          </div>
+          <div class="control-row wrap">
+            <button class="ghost" id="saveLiveBtn">Archive current snapshot</button>
+          </div>
+        </div>
+
+        <label class="field-label" for="livePath">Monitored file path <button class="info-dot" type="button" data-tooltip="Point this service at a local log file that is being appended over time." aria-label="Explain monitored file path">?</button></label>
+        <input type="text" id="livePath" placeholder="C:\path\to\trace.log">
+        <div class="control-row wrap">
+          <button class="primary" id="startLiveBtn">Start monitor</button>
+          <button class="ghost" id="stopLiveBtn">Stop monitor</button>
+          <button class="ghost" id="startReplayBtn">Start replay service</button>
+          <button class="ghost" id="stopReplayBtn">Stop replay</button>
+        </div>
+        <div class="status-stack">
+          <div class="status-blade" id="liveStatus">Live monitoring idle.</div>
+          <div class="status-blade subtle" id="replayStatus">Replay idle.</div>
+          <div class="status-blade subtle" id="liveSaveStatus">Archived snapshots will appear in the run archive.</div>
+        </div>
+      </section>
+
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Live result stream</div>
+            <h2>Current timeline</h2>
+          </div>
+        </div>
+        <div class="chart-card expert-chart">
+          <svg id="trendChart" viewBox="0 0 760 280" preserveAspectRatio="none"></svg>
+          <div class="chart-legend">
+            <span><i class="legend-swatch baseline"></i>Baseline Sentinel</span>
+            <span><i class="legend-swatch improved"></i>Apex Insight</span>
+            <span><i class="legend-swatch truth"></i>Attack label</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="side-column">
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Replay input library</div>
+            <h2>Prepared sources</h2>
+          </div>
+        </div>
+        <div class="path-list" id="pathList"></div>
+      </section>
+
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Recent live snapshots</div>
+            <h2>Monitor history</h2>
+          </div>
+        </div>
+        <div class="report-list" id="liveHistory"></div>
+      </section>
+    </aside>
+  </section>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='live.js') }}"></script>
+{% endblock %}

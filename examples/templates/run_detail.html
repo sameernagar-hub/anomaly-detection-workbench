@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Run Details | CSUF Anomaly Detection Workbench{% endblock %}
+{% block content %}
+  <section class="glass-card section-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Run Details Service</div>
+        <h1 id="runTitle">Archived run</h1>
+      </div>
+      <div class="control-row wrap">
+        <a class="ghost" href="{{ url_for('history_page') }}">Back to history</a>
+        <button class="ghost" id="exportCsvBtn">Export CSV</button>
+        <button class="ghost" id="exportJsonBtn">Export JSON</button>
+        <button class="ghost" id="exportHtmlBtn">Export HTML</button>
+      </div>
+    </div>
+    <div class="run-meta-grid" id="runMeta"></div>
+  </section>
+
+  <section class="metric-ribbon">
+    <article class="metric-card">
+      <span>Windows analyzed</span>
+      <strong id="metricWindows">0</strong>
+      <small>Saved report volume</small>
+    </article>
+    <article class="metric-card">
+      <span>Baseline Sentinel</span>
+      <strong id="metricBaselineAnomalies">0</strong>
+      <small>Anomalies flagged</small>
+    </article>
+    <article class="metric-card">
+      <span>Apex Insight</span>
+      <strong id="metricImprovedAnomalies">0</strong>
+      <small>Anomalies flagged</small>
+    </article>
+    <article class="metric-card accent">
+      <span>Agreement <button class="info-dot" type="button" data-tooltip="How often the two models reached the same decision in this saved run." aria-label="Explain agreement">?</button></span>
+      <strong id="metricAgreement">0%</strong>
+      <small>Shared verdict rate</small>
+    </article>
+    <article class="metric-card">
+      <span>Improved accuracy</span>
+      <strong id="metricImprovedAccuracy">-</strong>
+      <small>Label aligned score</small>
+    </article>
+  </section>
+
+  <section class="content-grid">
+    <div class="main-column">
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Summary service</div>
+            <h2>Archived verdict</h2>
+          </div>
+        </div>
+        <div class="runway-grid">
+          <article class="runway-tile">
+            <span>Active report</span>
+            <strong id="currentReportName">No report yet</strong>
+            <small id="currentReportMode">Compare mode</small>
+          </article>
+          <article class="runway-tile">
+            <span>Latest baseline score</span>
+            <strong id="latestBaselineScore">-</strong>
+            <small id="latestBaselineVerdict">Awaiting prediction</small>
+          </article>
+          <article class="runway-tile">
+            <span>Latest improved score</span>
+            <strong id="latestImprovedScore">-</strong>
+            <small id="latestImprovedVerdict">Awaiting prediction</small>
+          </article>
+          <article class="runway-tile">
+            <span>Drift posture <button class="info-dot" type="button" data-tooltip="A lightweight drift signal that indicates whether the recent sequence behavior is moving away from the expected baseline." aria-label="Explain drift posture">?</button></span>
+            <strong id="driftStatus">-</strong>
+            <small id="driftMessage">Need analysis to evaluate drift.</small>
+          </article>
+        </div>
+      </section>
+
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Timeline service</div>
+            <h2>Saved timeline</h2>
+          </div>
+        </div>
+        <div class="chart-card expert-chart">
+          <svg id="trendChart" viewBox="0 0 760 280" preserveAspectRatio="none"></svg>
+          <div class="chart-legend">
+            <span><i class="legend-swatch baseline"></i>Baseline Sentinel</span>
+            <span><i class="legend-swatch improved"></i>Apex Insight</span>
+            <span><i class="legend-swatch truth"></i>Attack label</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Evidence service</div>
+            <h2>Evidence table</h2>
+          </div>
+          <div class="section-actions">
+            <span class="pill-label" id="rowCountLabel">0 windows</span>
+          </div>
+        </div>
+        <div class="filter-row">
+          <div class="filter-group">
+            <label class="field-label" for="rowFilter">Window filter</label>
+            <select id="rowFilter">
+              <option value="all">All windows</option>
+              <option value="anomaly">Any anomaly</option>
+              <option value="disagreement">Disagreements only</option>
+              <option value="truth-attack">Attack labels only</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="field-label" for="hostFilter">Host group <button class="info-dot" type="button" data-tooltip="Derived grouping used to cluster events by host-like source when explicit host fields are not available." aria-label="Explain host group">?</button></label>
+            <select id="hostFilter">
+              <option value="all">All hosts</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Line</th>
+                <th>Host</th>
+                <th>Event</th>
+                <th>Baseline</th>
+                <th>Improved</th>
+                <th>Agreement</th>
+                <th>Truth</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <aside class="side-column">
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Run metadata</div>
+            <h2>Execution context</h2>
+          </div>
+        </div>
+        <div class="report-list" id="runContext"></div>
+      </section>
+    </aside>
+  </section>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='run_detail.js') }}"></script>
+{% endblock %}

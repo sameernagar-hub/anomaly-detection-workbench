@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>CSUF Anomaly Detection Workbench</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='luxury.css') }}">
+</head>
+<body data-theme="campus">
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
+  <header class="site-header">
+    <div class="brand-lockup">
+      <div class="brand-mark">AD</div>
+      <div>
+        <div class="eyebrow">CSUF Final Project</div>
+        <strong>Anomaly Detection Workbench</strong>
+      </div>
+    </div>
+
+    <nav class="top-nav" aria-label="Primary">
+      <button class="nav-link active" data-nav-target="overview">Overview</button>
+      <button class="nav-link" data-nav-target="studio">Studio</button>
+      <button class="nav-link" data-nav-target="live">Live</button>
+      <button class="nav-link" data-nav-target="evaluation">Evaluation</button>
+      <button class="nav-link" data-nav-target="reports">Exports</button>
+    </nav>
+
+    <div class="header-actions">
+      <label class="theme-control" for="themeSelect">
+        <span>Theme</span>
+        <select id="themeSelect">
+          <option value="campus">Campus</option>
+          <option value="midnight">Midnight</option>
+          <option value="signal">Signal</option>
+        </select>
+      </label>
+      <button class="ghost" id="heroLoadSample">Load Featured Demo</button>
+      <button class="primary" id="heroReplay">Start Live Replay</button>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero-card focus-panel" id="overview" data-section="overview">
+      <div class="hero-copy">
+        <div class="eyebrow">Overview</div>
+        <h1>System Status</h1>
+        <p>
+          This interface compares the baseline sequence model with the improved model using
+          uploaded traces, prepared samples, live monitoring, and evaluation metrics.
+        </p>
+
+        <div class="hero-badges">
+          <span>Baseline model intact</span>
+          <span>Improved model intact</span>
+          <span>Live replay available</span>
+          <span>Sample data included</span>
+        </div>
+
+        <div class="slide-shell">
+          <div class="slide-header">
+            <div>
+              <div class="eyebrow">Highlights</div>
+              <strong id="slideTitle">Preparing latest results</strong>
+            </div>
+            <div class="slide-controls">
+              <button class="ghost compact" id="slidePrev" aria-label="Previous slide">Prev</button>
+              <button class="ghost compact" id="slideNext" aria-label="Next slide">Next</button>
+            </div>
+          </div>
+          <div class="slide-body">
+            <div class="slide-metric" id="slideMetric">Waiting</div>
+            <div class="slide-text">
+              <div class="slide-meta" id="slideMeta">Recent activity will appear here.</div>
+              <p id="slideBody">The front panel rotates recent report summaries, evaluation wins, and live-monitor snapshots.</p>
+            </div>
+          </div>
+          <div class="slide-dots" id="slideDots"></div>
+        </div>
+      </div>
+
+      <div class="hero-panel">
+        <div class="panel-kicker">Current status</div>
+        <div class="hero-status-grid">
+          <div class="status-tile">
+            <span>Bootstrap</span>
+            <strong id="bootstrapState">Starting</strong>
+            <small id="bootstrapMessage">Loading models and startup sample.</small>
+          </div>
+          <div class="status-tile">
+            <span>Evaluation</span>
+            <strong id="evaluationState">Pending</strong>
+            <small id="evaluationMessage">Benchmark snapshot not ready yet.</small>
+          </div>
+          <div class="status-tile">
+            <span>Live status</span>
+            <strong id="liveState">Idle</strong>
+            <small id="liveHint">Replay or manual path</small>
+          </div>
+          <div class="status-tile">
+            <span>Adaptive threshold</span>
+            <strong id="adaptiveState">-</strong>
+            <small id="adaptiveReason">Awaiting current threshold state.</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="metric-ribbon">
+      <article class="metric-card">
+        <span>Windows analyzed</span>
+        <strong id="metricWindows">0</strong>
+        <small>Current report volume</small>
+      </article>
+      <article class="metric-card">
+        <span>Baseline Sentinel</span>
+        <strong id="metricBaselineAnomalies">0</strong>
+        <small>Anomalies flagged</small>
+      </article>
+      <article class="metric-card">
+        <span>Apex Insight</span>
+        <strong id="metricImprovedAnomalies">0</strong>
+        <small>Anomalies flagged</small>
+      </article>
+      <article class="metric-card accent">
+        <span>Agreement</span>
+        <strong id="metricAgreement">0%</strong>
+        <small>Shared verdict rate</small>
+      </article>
+      <article class="metric-card">
+        <span>Improved accuracy</span>
+        <strong id="metricImprovedAccuracy">-</strong>
+        <small>Label aligned score</small>
+      </article>
+    </section>
+
+    <section class="content-grid">
+      <div class="main-column">
+        <section class="glass-card section-card focus-panel" id="studio" data-section="studio">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Scenario Gallery</div>
+              <h2>Prepared sample cases</h2>
+            </div>
+            <div class="section-actions">
+              <button class="ghost" id="refreshEvaluation">Refresh Benchmark</button>
+            </div>
+          </div>
+          <div class="scenario-grid" id="scenarioGrid"></div>
+        </section>
+
+        <section class="glass-card section-card">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Analysis Studio</div>
+              <h2>Upload, paste, compare, and filter</h2>
+            </div>
+            <div class="mode-switch">
+              <label class="field-label" for="analysisMode">View mode</label>
+              <select id="analysisMode">
+                <option value="compare">Dual Command View</option>
+                <option value="deeplog">Baseline Sentinel only</option>
+                <option value="report">Apex Insight only</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="studio-grid">
+            <div class="composer-panel">
+              <label class="field-label" for="logText">Scenario text console</label>
+              <textarea id="logText"></textarea>
+              <div class="control-row">
+                <button class="primary" id="analyzeTextBtn">Analyze text</button>
+                <button class="ghost" id="loadFeaturedBtn">Load featured text</button>
+              </div>
+            </div>
+
+            <div class="utility-panel">
+              <div class="upload-block inset-card">
+                <label class="field-label" for="uploadFile">Upload a local log file</label>
+                <input type="file" id="uploadFile" accept=".txt,.log,.csv">
+                <button class="ghost" id="analyzeUploadBtn">Analyze upload</button>
+              </div>
+
+              <div class="filter-stack inset-card">
+                <div class="filter-group">
+                  <label class="field-label" for="rowFilter">Window filter</label>
+                  <select id="rowFilter">
+                    <option value="all">All windows</option>
+                    <option value="anomaly">Any anomaly</option>
+                    <option value="disagreement">Disagreements only</option>
+                    <option value="truth-attack">Attack labels only</option>
+                  </select>
+                </div>
+                <div class="filter-group">
+                  <label class="field-label" for="hostFilter">Host group</label>
+                  <select id="hostFilter">
+                    <option value="all">All hosts</option>
+                  </select>
+                </div>
+                <div class="toggle-row">
+                  <button class="toggle" id="toggleAdaptiveBtn">Toggle adaptive threshold</button>
+                  <button class="toggle" id="toggleMetricsBtn">Focus evaluation</button>
+                </div>
+              </div>
+
+              <div class="status-blade" id="analysisStatus">Featured sample ready.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="glass-card section-card">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Current verdict</div>
+              <h2>Latest report summary</h2>
+            </div>
+          </div>
+
+          <div class="runway-grid">
+            <article class="runway-tile">
+              <span>Active report</span>
+              <strong id="currentReportName">No report yet</strong>
+              <small id="currentReportMode">Compare mode</small>
+            </article>
+            <article class="runway-tile">
+              <span>Latest baseline score</span>
+              <strong id="latestBaselineScore">-</strong>
+              <small id="latestBaselineVerdict">Awaiting prediction</small>
+            </article>
+            <article class="runway-tile">
+              <span>Latest improved score</span>
+              <strong id="latestImprovedScore">-</strong>
+              <small id="latestImprovedVerdict">Awaiting prediction</small>
+            </article>
+            <article class="runway-tile">
+              <span>Drift posture</span>
+              <strong id="driftStatus">-</strong>
+              <small id="driftMessage">Need analysis to evaluate drift.</small>
+            </article>
+          </div>
+
+          <div class="chart-card expert-chart">
+            <div class="chart-head">
+              <strong>Trend graph</strong>
+              <span>Rolling anomaly score timeline</span>
+            </div>
+            <svg id="trendChart" viewBox="0 0 760 280" preserveAspectRatio="none"></svg>
+            <div class="chart-legend">
+              <span><i class="legend-swatch baseline"></i>Baseline Sentinel</span>
+              <span><i class="legend-swatch improved"></i>Apex Insight</span>
+              <span><i class="legend-swatch truth"></i>Attack label</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="glass-card section-card focus-panel" id="evaluation" data-section="evaluation">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Evaluation Lab</div>
+              <h2>Model comparison</h2>
+            </div>
+            <div class="section-actions">
+              <span class="pill-label" id="evaluationHeadline">Waiting for benchmark snapshot</span>
+            </div>
+          </div>
+
+          <div class="eval-topline">
+            <article class="compare-stat">
+              <span>Baseline accuracy</span>
+              <strong id="evalBaselineAccuracy">-</strong>
+              <small>{{ bootstrap_data.model_names.baseline.label }}</small>
+            </article>
+            <article class="compare-stat accent">
+              <span>Improved accuracy</span>
+              <strong id="evalImprovedAccuracy">-</strong>
+              <small>{{ bootstrap_data.model_names.improved.label }}</small>
+            </article>
+            <article class="compare-stat">
+              <span>Metric wins</span>
+              <strong id="evalMetricWins">-</strong>
+              <small>Tracked benchmark metrics</small>
+            </article>
+            <article class="compare-stat">
+              <span>Cross-host delta</span>
+              <strong id="evalCrossDelta">-</strong>
+              <small>Proxy host-group benchmark</small>
+            </article>
+          </div>
+
+          <div class="benchmark-grid">
+            <div class="chart-card">
+              <div class="chart-head">
+                <strong>Metric comparison</strong>
+                <span>Accuracy, precision, recall, F1, and false-positive rate</span>
+              </div>
+              <div class="metric-rows" id="metricRows"></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-head">
+                <strong>Cross-host proxy folds</strong>
+                <span>Fold-by-fold accuracy comparison</span>
+              </div>
+              <div class="fold-rows" id="foldRows"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="glass-card section-card">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Window Review</div>
+              <h2>Evidence table</h2>
+            </div>
+            <div class="section-actions">
+              <span class="pill-label" id="rowCountLabel">0 windows</span>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Line</th>
+                  <th>Host</th>
+                  <th>Event</th>
+                  <th>Baseline</th>
+                  <th>Improved</th>
+                  <th>Agreement</th>
+                  <th>Truth</th>
+                </tr>
+              </thead>
+              <tbody id="resultsBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <aside class="side-column">
+        <section class="glass-card section-card focus-panel" id="live" data-section="live">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Live Monitor</div>
+              <h2>Replay and monitor</h2>
+            </div>
+          </div>
+
+          <label class="field-label" for="livePath">Manual file path</label>
+          <input type="text" id="livePath" placeholder="C:\path\to\trace.log">
+          <div class="control-row wrap">
+            <button class="primary" id="startLiveBtn">Start live</button>
+            <button class="ghost" id="stopLiveBtn">Stop live</button>
+            <button class="ghost" id="startReplayBtn">Replay featured demo</button>
+            <button class="ghost" id="stopReplayBtn">Stop replay</button>
+          </div>
+          <div class="status-stack">
+            <div class="status-blade" id="liveStatus">Live monitor idle.</div>
+            <div class="status-blade subtle" id="replayStatus">Replay idle.</div>
+          </div>
+          <div class="path-list" id="pathList"></div>
+        </section>
+
+        <section class="glass-card section-card">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Snapshot</div>
+              <h2>Model activity</h2>
+            </div>
+          </div>
+          <div class="bar-list" id="comparisonBars"></div>
+        </section>
+
+        <section class="glass-card section-card">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Drift</div>
+              <h2>Trend diagnostics</h2>
+            </div>
+          </div>
+          <div class="bar-list" id="driftBars"></div>
+        </section>
+
+        <section class="glass-card section-card">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Recent Reports</div>
+              <h2>Session history</h2>
+            </div>
+          </div>
+          <div class="report-list" id="recentReports"></div>
+        </section>
+
+        <section class="glass-card section-card focus-panel" id="reports" data-section="reports">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Exports</div>
+              <h2>Takeaway files</h2>
+            </div>
+          </div>
+          <div class="control-column">
+            <button class="ghost" id="exportCsvBtn">Export CSV</button>
+            <button class="ghost" id="exportJsonBtn">Export JSON</button>
+            <button class="ghost" id="exportHtmlBtn">Export HTML</button>
+          </div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script id="bootstrap-data" type="application/json">{{ bootstrap_data|tojson }}</script>
+  <script src="{{ url_for('static', filename='luxury.js') }}"></script>
+</body>
+</html>

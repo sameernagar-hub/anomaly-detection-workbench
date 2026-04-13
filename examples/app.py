@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import json
 import threading
+import time
+import uuid
 from collections import deque
 from datetime import datetime
 from pathlib import Path
 import sys
-from typing import Any, Deque, Dict, Optional
+from typing import Any, Deque, Dict, List, Optional
 
-from flask import Flask, Response, jsonify, render_template_string, request
+from flask import Flask, Response, abort, jsonify, redirect, render_template, request, send_file, url_for
 from werkzeug.utils import secure_filename
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -21,75 +23,352 @@ from workbench import DEFAULT_UPLOAD_TEXT, AnomalyWorkbench, LiveMonitor, load_r
 app = Flask(__name__)
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+DEMO_RUNTIME_DIR = BASE_DIR / "demo_runtime"
+DEMO_RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+SAMPLE_DIR = BASE_DIR / "sample_data"
+
+MODEL_NAMES = {
+    "baseline": {
+        "label": "Baseline Sentinel",
+        "subtitle": "Baseline sequence model",
+    },
+    "improved": {
+        "label": "Apex Insight",
+        "subtitle": "Improved argument-aware model",
+    },
+}
+
+SAMPLE_SCENARIOS = [
+    {
+        "id": "executive-brief",
+        "filename": "executive_brief.log",
+        "title": "Executive Brief",
+        "eyebrow": "Balanced sample",
+        "description": "A premium walkthrough trace with a clean opening, a reconnaissance burst, and enough volume to light up every chart.",
+        "tags": ["balanced", "demo-ready", "compare"],
+        "mood": "Emerald Core",
+    },
+    {
+        "id": "recon-surge",
+        "filename": "recon_surge.log",
+        "title": "Recon Surge",
+        "eyebrow": "Attack-heavy sample",
+        "description": "A louder stream with repeated reconnaissance-style spikes that makes the improved model story easy to visualize.",
+        "tags": ["attack", "high-signal", "live-demo"],
+        "mood": "Gold Pulse",
+    },
+    {
+        "id": "night-shift",
+        "filename": "night_shift.log",
+        "title": "Night Shift Drift",
+        "eyebrow": "Drift scenario",
+        "description": "Starts quiet, shifts protocol mix, and ends with enough variance to trigger drift and adaptive-threshold storytelling.",
+        "tags": ["drift", "adaptive", "timeline"],
+        "mood": "Graphite Tide",
+    },
+    {
+        "id": "disagreement-lab",
+        "filename": "disagreement_lab.log",
+        "title": "Disagreement Lab",
+        "eyebrow": "Model showdown",
+        "description": "A curated sequence meant to spotlight disagreement windows, mixed labels, and metric deltas between the two models.",
+        "tags": ["disagreement", "benchmark", "storytelling"],
+        "mood": "Copper Signal",
+    },
+]
 
 workbench = AnomalyWorkbench(BASE_DIR)
 live_monitor = LiveMonitor(workbench)
 
-RECENT_REPORTS: Deque[Dict[str, Any]] = deque(maxlen=20)
-CURRENT_REPORT: Dict[str, Any] = {
-    "source": "bootstrap",
-    "filename": "sample_unsw.log",
-    "created_at": None,
-    "mode": "compare",
-    "result": None,
-}
+RUN_LIMIT = 80
+RUN_ORDER: Deque[str] = deque(maxlen=RUN_LIMIT)
+RUN_STORE: Dict[str, Dict[str, Any]] = {}
+RUN_LOCK = threading.Lock()
+CURRENT_RUN_ID: Optional[str] = None
 
 BOOTSTRAP_STATUS: Dict[str, Any] = {
     "state": "starting",
-    "message": "Loading and training models...",
+    "message": "Warming the anomaly showcase...",
     "details": {},
 }
 
+EVALUATION_CACHE: Dict[str, Any] = {
+    "state": "idle",
+    "message": "Evaluation snapshot has not run yet.",
+    "updated_at": None,
+    "benchmark": None,
+}
 
-def _set_current_report(source: str, filename: str, mode: str, result: Dict[str, Any]) -> None:
-    report = {
+BOOTSTRAP_LOCK = threading.Lock()
+BOOTSTRAP_THREAD: Optional[threading.Thread] = None
+EVALUATION_THREAD: Optional[threading.Thread] = None
+
+
+def _scenario_path(sample_id: str) -> Path:
+    for scenario in SAMPLE_SCENARIOS:
+        if scenario["id"] == sample_id:
+            return SAMPLE_DIR / scenario["filename"]
+    raise KeyError(f"Unknown scenario '{sample_id}'")
+
+
+def _scenario_meta(sample_id: str) -> Dict[str, Any]:
+    for scenario in SAMPLE_SCENARIOS:
+        if scenario["id"] == sample_id:
+            path = SAMPLE_DIR / scenario["filename"]
+            line_count = 0
+            if path.exists():
+                line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+            return {
+                **scenario,
+                "path": str(path.resolve()),
+                "line_count": line_count,
+            }
+    raise KeyError(f"Unknown scenario '{sample_id}'")
+
+
+def demo_catalog() -> List[Dict[str, Any]]:
+    return [_scenario_meta(scenario["id"]) for scenario in SAMPLE_SCENARIOS]
+
+
+def _timestamp() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _empty_result() -> Dict[str, Any]:
+    return {"summary": {}, "items": [], "charts": {}}
+
+
+def _summary_for(result: Dict[str, Any]) -> Dict[str, Any]:
+    return dict((result or {}).get("summary") or {})
+
+
+def _run_summary(run: Dict[str, Any]) -> Dict[str, Any]:
+    summary = run.get("summary", {})
+    return {
+        "id": run["id"],
+        "source": run["source"],
+        "filename": run["filename"],
+        "created_at": run["created_at"],
+        "mode": run["mode"],
+        "summary": summary,
+        "metadata": run.get("metadata", {}),
+        "detail_url": url_for("run_detail", run_id=run["id"]),
+    }
+
+
+def _list_runs() -> List[Dict[str, Any]]:
+    with RUN_LOCK:
+        return [_run_summary(RUN_STORE[run_id]) for run_id in RUN_ORDER if run_id in RUN_STORE]
+
+
+def _current_run() -> Optional[Dict[str, Any]]:
+    with RUN_LOCK:
+        if CURRENT_RUN_ID and CURRENT_RUN_ID in RUN_STORE:
+            return RUN_STORE[CURRENT_RUN_ID]
+    return None
+
+
+def _store_run(source: str, filename: str, mode: str, result: Dict[str, Any], metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    global CURRENT_RUN_ID
+    run_id = uuid.uuid4().hex[:10]
+    run = {
+        "id": run_id,
         "source": source,
         "filename": filename,
-        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "created_at": _timestamp(),
         "mode": mode,
+        "summary": _summary_for(result),
         "result": result,
+        "metadata": metadata or {},
     }
-    CURRENT_REPORT.update(report)
-    RECENT_REPORTS.appendleft(
-        {
-            "source": source,
-            "filename": filename,
-            "created_at": report["created_at"],
-            "mode": mode,
-            "summary": result["summary"],
+    with RUN_LOCK:
+        RUN_STORE[run_id] = run
+        RUN_ORDER.appendleft(run_id)
+        CURRENT_RUN_ID = run_id
+        while len(RUN_ORDER) > RUN_LIMIT:
+            stale_id = RUN_ORDER.pop()
+            RUN_STORE.pop(stale_id, None)
+    return run
+
+
+def _run_by_id(run_id: str) -> Dict[str, Any]:
+    with RUN_LOCK:
+        run = RUN_STORE.get(run_id)
+    if run is None:
+        abort(404, description=f"Run '{run_id}' was not found.")
+    return run
+
+
+def _selected_run(run_id: Optional[str]) -> Dict[str, Any]:
+    if run_id:
+        return _run_by_id(run_id)
+    run = _current_run()
+    if run is None:
+        return {
+            "id": None,
+            "source": "none",
+            "filename": "No report yet",
+            "created_at": None,
+            "mode": "compare",
+            "summary": {},
+            "result": _empty_result(),
+            "metadata": {},
         }
-    )
+    return run
+
+
+def _run_filename(run: Dict[str, Any], extension: str) -> str:
+    stem = Path(run.get("filename") or "anomaly_report").stem
+    mode = run.get("mode", "compare")
+    return f"{stem}_{mode}.{extension}"
+
+
+def _bootstrap_payload(page: str, extras: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    featured = _scenario_meta("executive-brief")
+    current_run = _current_run()
+    payload = {
+        "page": page,
+        "sample_text": Path(featured["path"]).read_text(encoding="utf-8", errors="ignore"),
+        "sample_catalog": demo_catalog(),
+        "model_names": MODEL_NAMES,
+        "featured_sample": featured,
+        "default_upload_text": DEFAULT_UPLOAD_TEXT,
+        "current_run_id": current_run["id"] if current_run else None,
+    }
+    if extras:
+        payload.update(extras)
+    return payload
+
+
+def _build_benchmark_payload() -> Dict[str, Any]:
+    train_normal, test_normal, test_attack = workbench._training_records()
+    evaluation_records = test_normal + test_attack
+    result = workbench.predict_records(evaluation_records)
+    cross_host = workbench.evaluate_cross_host_proxy()
+
+    summary = result["summary"]
+    baseline_metrics = summary.get("deeplog_metrics", {})
+    improved_metrics = summary.get("report_metrics", {})
+    metric_names = ("accuracy", "precision", "recall", "f1", "false_positive_rate")
+    metric_rows = []
+    improved_wins = 0
+    for metric_name in metric_names:
+        baseline_value = baseline_metrics.get(metric_name)
+        improved_value = improved_metrics.get(metric_name)
+        delta = None
+        if baseline_value is not None and improved_value is not None:
+            delta = round(float(improved_value) - float(baseline_value), 3)
+            if metric_name == "false_positive_rate":
+                if improved_value < baseline_value:
+                    improved_wins += 1
+            elif improved_value > baseline_value:
+                improved_wins += 1
+        metric_rows.append(
+            {
+                "metric": metric_name,
+                "baseline": baseline_value,
+                "improved": improved_value,
+                "delta": delta,
+            }
+        )
+
+    folds = cross_host.get("folds", [])
+    baseline_cross = [fold.get("deeplog_accuracy") for fold in folds if fold.get("deeplog_accuracy") is not None]
+    improved_cross = [fold.get("report_accuracy") for fold in folds if fold.get("report_accuracy") is not None]
+    cross_summary = {
+        "fold_count": len(folds),
+        "baseline_avg_accuracy": round(sum(baseline_cross) / len(baseline_cross), 3) if baseline_cross else None,
+        "improved_avg_accuracy": round(sum(improved_cross) / len(improved_cross), 3) if improved_cross else None,
+    }
+    if cross_summary["baseline_avg_accuracy"] is not None and cross_summary["improved_avg_accuracy"] is not None:
+        cross_summary["delta"] = round(
+            cross_summary["improved_avg_accuracy"] - cross_summary["baseline_avg_accuracy"],
+            3,
+        )
+    else:
+        cross_summary["delta"] = None
+
+    headline = {
+        "window_count": summary.get("window_count", 0),
+        "labeled_windows": summary.get("labeled_windows", 0),
+        "improved_wins": improved_wins,
+        "metric_count": len(metric_rows),
+        "agreement_rate": summary.get("agreement_rate", 0.0),
+        "baseline_anomalies": summary.get("deeplog_anomalies", 0),
+        "improved_anomalies": summary.get("report_anomalies", 0),
+        "baseline_accuracy": summary.get("deep_vs_label_accuracy"),
+        "improved_accuracy": summary.get("report_vs_label_accuracy"),
+    }
+
+    return {
+        "standard": {
+            "summary": summary,
+            "metric_rows": metric_rows,
+        },
+        "cross_host": {
+            "note": cross_host.get("note"),
+            "summary": cross_summary,
+            "folds": folds,
+        },
+        "headline": headline,
+    }
+
+
+def _refresh_evaluation_cache() -> None:
+    global EVALUATION_THREAD
+    try:
+        EVALUATION_CACHE["state"] = "running"
+        EVALUATION_CACHE["message"] = "Computing benchmark metrics and cross-host proxy results..."
+        EVALUATION_CACHE["benchmark"] = _build_benchmark_payload()
+        EVALUATION_CACHE["state"] = "ready"
+        EVALUATION_CACHE["message"] = "Benchmark snapshot ready."
+        EVALUATION_CACHE["updated_at"] = _timestamp()
+    except Exception as exc:
+        EVALUATION_CACHE["state"] = "error"
+        EVALUATION_CACHE["message"] = str(exc)
+    finally:
+        EVALUATION_THREAD = None
+
+
+def ensure_evaluation_started() -> None:
+    global EVALUATION_THREAD
+    if EVALUATION_CACHE["state"] in {"running", "ready"}:
+        return
+    if EVALUATION_THREAD is not None and EVALUATION_THREAD.is_alive():
+        return
+    EVALUATION_THREAD = threading.Thread(target=_refresh_evaluation_cache, daemon=True)
+    EVALUATION_THREAD.start()
 
 
 def bootstrap_models() -> None:
     try:
         details = workbench.ensure_ready()
-        sample_result = workbench.predict_records(load_records_from_text(DEFAULT_UPLOAD_TEXT))
-        _set_current_report("bootstrap", "sample_unsw.log", "compare", sample_result)
+        featured_sample = _scenario_meta("executive-brief")
+        sample_result = workbench.predict_records(load_records_from_file(Path(featured_sample["path"])))
+        _store_run("bootstrap", featured_sample["filename"], "compare", sample_result, {"sample_id": "executive-brief"})
         BOOTSTRAP_STATUS["state"] = "ready"
-        BOOTSTRAP_STATUS["message"] = "Models are ready."
+        BOOTSTRAP_STATUS["message"] = "Models are warm and the workbench is ready."
         BOOTSTRAP_STATUS["details"] = details
+        ensure_evaluation_started()
     except Exception as exc:
         BOOTSTRAP_STATUS["state"] = "error"
         BOOTSTRAP_STATUS["message"] = str(exc)
 
 
-def project_status() -> Dict[str, Any]:
-    return {
-        "bootstrap": BOOTSTRAP_STATUS,
-        "artifacts": {
-            "baseline_model": str(workbench.baseline_artifact_path),
-            "report_model": str(workbench.report_model_path),
-        },
-        "adaptive": workbench.get_adaptive_status(),
-        "live": live_monitor.status(),
-        "recent_reports": list(RECENT_REPORTS),
-        "current_report": CURRENT_REPORT,
-    }
+def ensure_bootstrap_started() -> None:
+    global BOOTSTRAP_THREAD
+    with BOOTSTRAP_LOCK:
+        if BOOTSTRAP_THREAD is not None and BOOTSTRAP_THREAD.is_alive():
+            return
+        if BOOTSTRAP_STATUS["state"] == "ready":
+            return
+        BOOTSTRAP_THREAD = threading.Thread(target=bootstrap_models, daemon=True)
+        BOOTSTRAP_THREAD.start()
 
 
 def apply_mode_filter(result: Dict[str, Any], mode: str) -> Dict[str, Any]:
     if mode == "compare":
+        result["summary"]["active_model"] = "Dual Command View"
         return result
 
     filtered_items = []
@@ -108,11 +387,11 @@ def apply_mode_filter(result: Dict[str, Any], mode: str) -> Dict[str, Any]:
 
     filtered_summary = dict(result["summary"])
     if mode == "deeplog":
-        filtered_summary["active_model"] = "Baseline sequence model"
+        filtered_summary["active_model"] = MODEL_NAMES["baseline"]["label"]
     elif mode == "report":
-        filtered_summary["active_model"] = "Argument-aware report model"
+        filtered_summary["active_model"] = MODEL_NAMES["improved"]["label"]
     else:
-        filtered_summary["active_model"] = "Compare both"
+        filtered_summary["active_model"] = "Dual Command View"
 
     return {
         "summary": filtered_summary,
@@ -121,649 +400,231 @@ def apply_mode_filter(result: Dict[str, Any], mode: str) -> Dict[str, Any]:
     }
 
 
-def current_report_filename(extension: str) -> str:
-    stem = Path(CURRENT_REPORT.get("filename") or "anomaly_report").stem
-    return f"{stem}_{CURRENT_REPORT.get('mode', 'compare')}.{extension}"
+class DemoReplay:
+    def __init__(self, live_monitor_: LiveMonitor) -> None:
+        self.live_monitor = live_monitor_
+        self._stop = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+        self._status: Dict[str, Any] = {
+            "state": "idle",
+            "sample_id": None,
+            "target_path": None,
+            "appended_lines": 0,
+            "total_lines": 0,
+            "updated_at": None,
+            "message": "Replay idle.",
+        }
+
+    def start(self, sample_id: str, interval: float = 0.45) -> Dict[str, Any]:
+        source_path = _scenario_path(sample_id)
+        target_path = DEMO_RUNTIME_DIR / f"{sample_id}_live.log"
+        self.stop(stop_live=False)
+        target_path.write_text("", encoding="utf-8")
+        self._stop.clear()
+        self._status = {
+            "state": "starting",
+            "sample_id": sample_id,
+            "target_path": str(target_path.resolve()),
+            "appended_lines": 0,
+            "total_lines": 0,
+            "updated_at": _timestamp(),
+            "message": f"Preparing replay from {source_path.name}.",
+        }
+        self.live_monitor.start(str(target_path))
+        self._thread = threading.Thread(
+            target=self._run,
+            args=(sample_id, source_path, target_path, interval),
+            daemon=True,
+        )
+        self._thread.start()
+        return self.status()
+
+    def stop(self, stop_live: bool = True) -> Dict[str, Any]:
+        self._stop.set()
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=1.0)
+        self._thread = None
+        if stop_live:
+            self.live_monitor.stop()
+        if self._status["state"] not in {"complete", "idle"}:
+            self._status["state"] = "stopped"
+            self._status["message"] = "Replay stopped."
+            self._status["updated_at"] = _timestamp()
+        return self.status()
+
+    def status(self) -> Dict[str, Any]:
+        return dict(self._status)
+
+    def _run(self, sample_id: str, source_path: Path, target_path: Path, interval: float) -> None:
+        lines = source_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+        self._status["state"] = "running"
+        self._status["total_lines"] = len(lines)
+        self._status["message"] = f"Streaming {source_path.name} into live monitor."
+        for index, line in enumerate(lines, start=1):
+            if self._stop.is_set():
+                return
+            with target_path.open("a", encoding="utf-8") as outfile:
+                outfile.write(f"{line}\n")
+            self._status["sample_id"] = sample_id
+            self._status["appended_lines"] = index
+            self._status["updated_at"] = _timestamp()
+            self._status["message"] = f"Streaming live demo line {index} of {len(lines)}."
+            time.sleep(interval)
+        self._status["state"] = "complete"
+        self._status["updated_at"] = _timestamp()
+        self._status["message"] = "Replay complete. Live monitor will keep the final stream loaded."
+
+
+demo_replay = DemoReplay(live_monitor)
+
+
+def project_status() -> Dict[str, Any]:
+    current_run = _current_run()
+    return {
+        "bootstrap": BOOTSTRAP_STATUS,
+        "artifacts": {
+            "baseline_model": str(workbench.baseline_artifact_path),
+            "report_model": str(workbench.report_model_path),
+        },
+        "adaptive": workbench.get_adaptive_status(),
+        "live": live_monitor.status(),
+        "replay": demo_replay.status(),
+        "recent_runs": _list_runs(),
+        "current_run": _run_summary(current_run) if current_run else None,
+        "current_result": current_run["result"] if current_run else None,
+        "model_names": MODEL_NAMES,
+        "evaluation": {
+            "state": EVALUATION_CACHE["state"],
+            "message": EVALUATION_CACHE["message"],
+            "updated_at": EVALUATION_CACHE["updated_at"],
+        },
+    }
+
+
+def _persist_analysis(source: str, filename: str, mode: str, result: Dict[str, Any], metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    return _store_run(source, filename, mode, result, metadata)
+
+
+@app.before_request
+def _ensure_background_tasks() -> None:
+    ensure_bootstrap_started()
 
 
 @app.route("/")
-def index() -> str:
-    return render_template_string(
-        """
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Baseline vs Report Model Workbench</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    :root {
-      --bg: #eef2e3;
-      --panel: #fffdf7;
-      --ink: #1d2a22;
-      --muted: #53635a;
-      --accent: #1f6f5f;
-      --accent-soft: #d8efe8;
-      --warn: #a43b2c;
-      --warn-soft: #fde6df;
-      --border: #d9e1d2;
-      --shadow: 0 14px 34px rgba(46, 68, 54, 0.12);
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background:
-        radial-gradient(circle at top right, rgba(31, 111, 95, 0.12), transparent 28%),
-        linear-gradient(180deg, #f6f9ef 0%, var(--bg) 100%);
-      color: var(--ink);
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    }
-    .shell {
-      width: min(1320px, calc(100% - 32px));
-      margin: 24px auto 40px;
-    }
-    .hero, .panel, .table-card, .log-card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 22px;
-      box-shadow: var(--shadow);
-    }
-    .hero {
-      padding: 28px;
-      display: grid;
-      grid-template-columns: 1.3fr 1fr;
-      gap: 18px;
-      margin-bottom: 18px;
-    }
-    .hero h1 {
-      margin: 0 0 8px;
-      font-size: clamp(1.9rem, 2.8vw, 3rem);
-    }
-    .hero p {
-      margin: 0;
-      color: var(--muted);
-      line-height: 1.55;
-    }
-    .badge-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 16px;
-    }
-    .chip {
-      background: var(--accent-soft);
-      color: var(--accent);
-      border-radius: 999px;
-      padding: 8px 12px;
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-    .hero-status {
-      background: linear-gradient(180deg, #f5fbf8 0%, #eef6f2 100%);
-      border-radius: 18px;
-      padding: 18px;
-      border: 1px solid #d7ebe3;
-    }
-    .hero-status strong {
-      display: block;
-      margin-bottom: 8px;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 16px;
-      margin-bottom: 18px;
-    }
-    .panel {
-      padding: 18px;
-    }
-    .metric {
-      font-size: 2rem;
-      font-weight: 700;
-      margin-top: 6px;
-    }
-    .muted {
-      color: var(--muted);
-    }
-    .workspace {
-      display: grid;
-      grid-template-columns: 1.15fr 0.85fr;
-      gap: 18px;
-      margin-bottom: 18px;
-    }
-    .stack {
-      display: grid;
-      gap: 18px;
-    }
-    textarea, input[type="text"], select {
-      width: 100%;
-      border-radius: 14px;
-      border: 1px solid #c6d3c6;
-      background: #fcfdf9;
-      color: var(--ink);
-      padding: 12px 14px;
-      font: inherit;
-    }
-    textarea {
-      min-height: 220px;
-      resize: vertical;
-      line-height: 1.45;
-    }
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 12px;
-    }
-    button {
-      border: 0;
-      border-radius: 14px;
-      padding: 11px 16px;
-      cursor: pointer;
-      font: inherit;
-      font-weight: 700;
-    }
-    .primary {
-      background: var(--accent);
-      color: white;
-    }
-    .secondary {
-      background: #ecf3eb;
-      color: var(--ink);
-    }
-    .danger {
-      background: var(--warn-soft);
-      color: var(--warn);
-    }
-    .section-title {
-      margin: 0 0 12px;
-      font-size: 1.05rem;
-    }
-    .mini-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-    }
-    .log-card {
-      padding: 18px;
-    }
-    .bars {
-      display: grid;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .bar-row {
-      display: grid;
-      grid-template-columns: 170px 1fr 56px;
-      gap: 12px;
-      align-items: center;
-    }
-    .bar {
-      height: 12px;
-      background: #e4ebe0;
-      border-radius: 999px;
-      overflow: hidden;
-    }
-    .fill {
-      height: 100%;
-      background: linear-gradient(90deg, #277765 0%, #79bfaa 100%);
-      border-radius: 999px;
-    }
-    .timeline {
-      display: grid;
-      gap: 8px;
-      margin-top: 12px;
-      max-height: 260px;
-      overflow: auto;
-    }
-    .timeline-row {
-      display: grid;
-      grid-template-columns: 70px 1fr 1fr 70px;
-      gap: 10px;
-      align-items: center;
-      font-size: 0.92rem;
-    }
-    .spark {
-      height: 10px;
-      background: #e6ece2;
-      border-radius: 999px;
-      overflow: hidden;
-    }
-    .spark span {
-      display: block;
-      height: 100%;
-      background: linear-gradient(90deg, #275f8c 0%, #7eb5df 100%);
-      border-radius: 999px;
-    }
-    .spark.report span {
-      background: linear-gradient(90deg, #9d4d1e 0%, #e5a565 100%);
-    }
-    .table-card {
-      padding: 18px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.94rem;
-    }
-    th, td {
-      padding: 10px 8px;
-      border-bottom: 1px solid #ebefe7;
-      text-align: left;
-      vertical-align: top;
-    }
-    th {
-      color: var(--muted);
-      font-weight: 700;
-      font-size: 0.82rem;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-    }
-    code {
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-family: Consolas, "Courier New", monospace;
-      font-size: 0.86rem;
-    }
-    .pill {
-      display: inline-block;
-      border-radius: 999px;
-      padding: 5px 10px;
-      font-size: 0.8rem;
-      font-weight: 700;
-    }
-    .normal { background: #e4f4eb; color: #25624e; }
-    .anomaly { background: #fde6df; color: #a43b2c; }
-    .agree { background: #edf5ea; color: #375c2a; }
-    .disagree { background: #fff0cb; color: #8c6418; }
-    .status-box {
-      margin-top: 12px;
-      padding: 12px 14px;
-      border-radius: 14px;
-      background: #f4f8f0;
-      border: 1px solid #dce7d5;
-      color: var(--muted);
-    }
-    .recent-list {
-      display: grid;
-      gap: 10px;
-      margin-top: 12px;
-      max-height: 200px;
-      overflow: auto;
-    }
-    .recent-item {
-      border: 1px solid #e5ebe1;
-      border-radius: 14px;
-      padding: 10px 12px;
-      background: #fcfdf9;
-    }
-    @media (max-width: 1100px) {
-      .hero, .workspace { grid-template-columns: 1fr; }
-      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-    @media (max-width: 720px) {
-      .grid, .mini-grid { grid-template-columns: 1fr; }
-      .bar-row, .timeline-row { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
-<body>
-  <div class="shell">
-    <section class="hero">
-      <div>
-        <h1>Baseline vs Your Report Model</h1>
-        <p>
-          Upload UNSW-style traces, paste raw log text, or tail a live file path.
-          The dashboard compares the baseline sequence model against an argument-aware
-          sequence model so you can review the same windows from both perspectives.
-        </p>
-        <div class="badge-row">
-          <div class="chip">UNSW-trained baseline</div>
-          <div class="chip">Argument-aware comparison model</div>
-          <div class="chip">Upload + live file monitoring</div>
-        </div>
-      </div>
-      <div class="hero-status">
-        <strong>System status</strong>
-        <div id="bootstrapState">Loading...</div>
-        <div class="muted" id="bootstrapMessage">Preparing artifacts...</div>
-        <div class="muted" id="artifactInfo" style="margin-top:10px;">-</div>
-      </div>
-    </section>
+def home() -> Response:
+    return redirect(url_for("overview"))
 
-    <section class="grid">
-      <div class="panel">
-        <div class="muted">Analyzed Windows</div>
-        <div class="metric" id="metricWindows">0</div>
-      </div>
-      <div class="panel">
-        <div class="muted">Baseline Anomalies</div>
-        <div class="metric" id="metricDeep">0</div>
-      </div>
-      <div class="panel">
-        <div class="muted">Report Model Anomalies</div>
-        <div class="metric" id="metricReport">0</div>
-      </div>
-      <div class="panel">
-        <div class="muted">Agreement Rate</div>
-        <div class="metric" id="metricAgreement">0%</div>
-      </div>
-    </section>
 
-    <section class="workspace">
-      <div class="stack">
-        <div class="panel">
-          <h2 class="section-title">Upload Or Paste Logs</h2>
-          <div class="mini-grid">
-            <div>
-              <label class="muted" for="analysisMode">View</label>
-              <select id="analysisMode">
-                <option value="compare">Compare Both</option>
-                <option value="deeplog">Baseline Only</option>
-                <option value="report">Report Model Only</option>
-              </select>
-            </div>
-            <div>
-              <label class="muted" for="uploadFile">Upload file</label>
-              <input type="file" id="uploadFile" accept=".txt,.log,.csv">
-            </div>
-          </div>
-          <div style="margin-top: 12px;">
-            <label class="muted" for="logText">Or paste UNSW-style log lines</label>
-            <textarea id="logText"></textarea>
-          </div>
-          <div class="actions">
-            <button class="primary" id="analyzeTextBtn">Analyze Text</button>
-            <button class="secondary" id="analyzeUploadBtn">Analyze Uploaded File</button>
-            <button class="secondary" id="loadSampleBtn">Load Sample</button>
-            <button class="secondary" id="exportCsvBtn">Export CSV</button>
-            <button class="secondary" id="exportJsonBtn">Export JSON</button>
-            <button class="secondary" id="exportHtmlBtn">Printable Report</button>
-          </div>
-          <div class="status-box" id="analysisStatus">Waiting for input.</div>
-        </div>
+@app.route("/overview")
+def overview() -> str:
+    return render_template(
+        "overview.html",
+        active_page="overview",
+        bootstrap_data=_bootstrap_payload("overview"),
+    )
 
-        <div class="table-card">
-          <h2 class="section-title">Window Review</h2>
-          <div class="muted" style="margin-bottom: 10px;">Recent windows show raw line content, both anomaly scores, and where the models agree or diverge.</div>
-          <div style="overflow:auto;">
-            <table>
-              <thead>
-                <tr>
-                  <th>Line</th>
-                  <th>Event</th>
-                  <th>Baseline</th>
-                  <th>Report Model</th>
-                  <th>Agreement</th>
-                  <th>Truth</th>
-                </tr>
-              </thead>
-              <tbody id="resultsBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
 
-      <div class="stack">
-        <div class="panel">
-          <h2 class="section-title">Live File Monitoring</h2>
-          <label class="muted" for="livePath">Absolute file path to tail on this machine</label>
-          <input type="text" id="livePath" placeholder="C:\\path\\to\\trace.log">
-          <div class="actions">
-            <button class="primary" id="startLiveBtn">Start Live Mode</button>
-            <button class="danger" id="stopLiveBtn">Stop</button>
-            <button class="secondary" id="toggleAdaptiveBtn">Toggle Adaptive Threshold</button>
-          </div>
-          <div class="status-box" id="liveStatus">Live monitor idle.</div>
-          <div class="status-box" id="adaptiveStatus">Adaptive threshold status will appear here.</div>
-        </div>
+@app.route("/analyze")
+def analyze_page() -> str:
+    return render_template(
+        "analyze.html",
+        active_page="analyze",
+        bootstrap_data=_bootstrap_payload("analyze"),
+    )
 
-        <div class="log-card">
-          <h2 class="section-title">Comparison Snapshot</h2>
-          <div class="bars" id="comparisonBars"></div>
-        </div>
 
-        <div class="log-card">
-          <h2 class="section-title">Drift Monitor</h2>
-          <div class="status-box" id="driftSummary">Drift monitoring will appear after analysis.</div>
-          <div class="bars" id="driftBars"></div>
-        </div>
+@app.route("/live")
+def live_page() -> str:
+    return render_template(
+        "live.html",
+        active_page="live",
+        bootstrap_data=_bootstrap_payload("live"),
+    )
 
-        <div class="log-card">
-          <h2 class="section-title">Score Timeline</h2>
-          <div class="timeline" id="timelineRows"></div>
-        </div>
 
-        <div class="log-card">
-          <h2 class="section-title">Recent Reports</h2>
-          <div class="recent-list" id="recentReports"></div>
-        </div>
-      </div>
-    </section>
-  </div>
+@app.route("/evaluation")
+def evaluation_page() -> str:
+    return render_template(
+        "evaluation.html",
+        active_page="evaluation",
+        bootstrap_data=_bootstrap_payload("evaluation"),
+    )
 
-  <script>
-    const sampleText = {{ sample_text|tojson }};
 
-    function labelBadge(value) {
-      if (value === null || value === undefined) return '<span class="pill">n/a</span>';
-      return value === 1
-        ? '<span class="pill anomaly">Anomaly</span>'
-        : '<span class="pill normal">Normal</span>';
-    }
+@app.route("/history")
+def history_page() -> str:
+    return render_template(
+        "history.html",
+        active_page="history",
+        bootstrap_data=_bootstrap_payload("history"),
+    )
 
-    function agreementBadge(value) {
-      if (value === null || value === undefined) return '<span class="pill">n/a</span>';
-      return value
-        ? '<span class="pill agree">Agree</span>'
-        : '<span class="pill disagree">Disagree</span>';
-    }
 
-    function pct(value) {
-      return `${Math.round((value || 0) * 100)}%`;
-    }
-
-    function renderReport(result, sourceLabel) {
-      const summary = result.summary || {};
-      document.getElementById('metricWindows').textContent = summary.window_count || 0;
-      document.getElementById('metricDeep').textContent = summary.deeplog_anomalies || 0;
-      document.getElementById('metricReport').textContent = summary.report_anomalies || 0;
-      document.getElementById('metricAgreement').textContent = pct(summary.agreement_rate);
-
-      document.getElementById('analysisStatus').textContent =
-        `${sourceLabel} loaded. ${summary.window_count || 0} windows analyzed.`;
-
-      const rows = (result.items || []).slice(0, 24).map(item => `
-        <tr>
-          <td>${item.line_number}</td>
-          <td><code>${item.event}</code><br><span class="muted">${item.raw || ''}</span></td>
-          <td>${labelBadge(item.deeplog_prediction)}<br><span class="muted">score ${item.deeplog_score ?? 'n/a'}</span></td>
-          <td>${labelBadge(item.report_prediction)}<br><span class="muted">score ${item.report_score ?? 'n/a'}</span></td>
-          <td>${agreementBadge(item.agreement)}</td>
-          <td>${labelBadge(item.label)}<br><span class="muted">${item.attack_cat || ''}</span></td>
-        </tr>
-      `).join('');
-      document.getElementById('resultsBody').innerHTML = rows || '<tr><td colspan="6">Not enough events yet. Add more lines to create windows.</td></tr>';
-
-      const bars = (result.charts?.comparison || []).map(entry => {
-        const maxValue = Math.max(...(result.charts.comparison || []).map(x => x.value || 0), 1);
-        const width = ((entry.value || 0) / maxValue) * 100;
-        return `
-          <div class="bar-row">
-            <div>${entry.label}</div>
-            <div class="bar"><div class="fill" style="width:${width}%"></div></div>
-            <div>${entry.value || 0}</div>
-          </div>
-        `;
-      }).join('');
-      document.getElementById('comparisonBars').innerHTML = bars || '<div class="muted">No comparison data yet.</div>';
-
-      const drift = summary.drift || {};
-      document.getElementById('driftSummary').textContent =
-        `${drift.status || 'n/a'} | score shift ${drift.score_shift ?? 0} | anomaly-rate shift ${drift.anomaly_rate_shift ?? 0} | protocol shift ${drift.protocol_shift ?? 0}`;
-      const adaptive = summary.adaptive_threshold || {};
-      document.getElementById('adaptiveStatus').textContent =
-        `Adaptive ${adaptive.enabled ? 'on' : 'off'} | threshold ${adaptive.threshold ?? 'n/a'} | base ${adaptive.base_threshold ?? 'n/a'} | ${adaptive.reason || ''}`;
-      const driftBars = (result.charts?.drift || []).map(entry => {
-        const width = Math.min(100, Math.max(6, (entry.value || 0) * 100));
-        return `
-          <div class="bar-row">
-            <div>${entry.label}</div>
-            <div class="bar"><div class="fill" style="width:${width}%"></div></div>
-            <div>${entry.value || 0}</div>
-          </div>
-        `;
-      }).join('');
-      document.getElementById('driftBars').innerHTML = driftBars || '<div class="muted">Need more data for drift trends.</div>';
-
-      const timeline = (result.charts?.timeline || []).slice(-18).reverse().map(entry => `
-        <div class="timeline-row">
-          <div>#${entry.line_number}</div>
-          <div>
-            <div class="muted">Baseline ${entry.deeplog}</div>
-            <div class="spark"><span style="width:${Math.max(6, (entry.deeplog || 0) * 100)}%"></span></div>
-          </div>
-          <div>
-            <div class="muted">Report ${entry.report}</div>
-            <div class="spark report"><span style="width:${Math.max(6, (entry.report || 0) * 100)}%"></span></div>
-          </div>
-          <div>${labelBadge(entry.label)}</div>
-        </div>
-      `).join('');
-      document.getElementById('timelineRows').innerHTML = timeline || '<div class="muted">Timeline will appear after analysis.</div>';
-    }
-
-    function renderStatus(status) {
-      document.getElementById('bootstrapState').textContent = status.bootstrap.state || 'unknown';
-      document.getElementById('bootstrapMessage').textContent = status.bootstrap.message || '';
-      document.getElementById('artifactInfo').textContent =
-        `Baseline artifact: ${status.artifacts.baseline_model} | Report artifact: ${status.artifacts.report_model}`;
-      const adaptive = status.adaptive || {};
-      document.getElementById('adaptiveStatus').textContent =
-        `Adaptive ${adaptive.enabled ? 'on' : 'off'} | threshold ${adaptive.threshold ?? 'n/a'} | base ${adaptive.base_threshold ?? 'n/a'} | ${adaptive.reason || ''}`;
-
-      const live = status.live || {};
-      const livePath = live.path || 'No file selected';
-      const liveTime = live.updated_at || 'not updated yet';
-      document.getElementById('liveStatus').textContent =
-        `${live.status || 'idle'} | ${livePath} | last update ${liveTime}`;
-
-      const recent = (status.recent_reports || []).map(report => `
-        <div class="recent-item">
-          <strong>${report.filename}</strong><br>
-          <span class="muted">${report.created_at} • ${report.mode}</span><br>
-          <span class="muted">windows ${report.summary.window_count}, baseline ${report.summary.deeplog_anomalies}, report model ${report.summary.report_anomalies}</span>
-        </div>
-      `).join('');
-      document.getElementById('recentReports').innerHTML = recent || '<div class="muted">No reports yet.</div>';
-
-      if (status.current_report && status.current_report.result) {
-        renderReport(status.current_report.result, status.current_report.filename || 'Current report');
-      }
-    }
-
-    async function refreshStatus() {
-      const response = await fetch('/api/status');
-      const data = await response.json();
-      renderStatus(data);
-    }
-
-    async function analyzeText() {
-      const response = await fetch('/api/analyze/text', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: document.getElementById('logText').value,
-          mode: document.getElementById('analysisMode').value
-        })
-      });
-      const data = await response.json();
-      renderReport(data.result, 'Pasted text');
-      await refreshStatus();
-    }
-
-    async function analyzeUpload() {
-      const fileInput = document.getElementById('uploadFile');
-      if (!fileInput.files.length) {
-        document.getElementById('analysisStatus').textContent = 'Choose a file first.';
-        return;
-      }
-      const formData = new FormData();
-      formData.append('file', fileInput.files[0]);
-      formData.append('mode', document.getElementById('analysisMode').value);
-      const response = await fetch('/api/analyze/upload', { method: 'POST', body: formData });
-      const data = await response.json();
-      renderReport(data.result, data.filename || 'Uploaded file');
-      await refreshStatus();
-    }
-
-    async function startLive() {
-      const response = await fetch('/api/live/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: document.getElementById('livePath').value })
-      });
-      const data = await response.json();
-      document.getElementById('liveStatus').textContent = `${data.status} | ${data.path || 'no path'}`;
-    }
-
-    async function stopLive() {
-      await fetch('/api/live/stop', { method: 'POST' });
-      await refreshStatus();
-    }
-
-    async function toggleAdaptive() {
-      const response = await fetch('/api/adaptive/toggle', { method: 'POST' });
-      const data = await response.json();
-      document.getElementById('adaptiveStatus').textContent =
-        `Adaptive ${data.enabled ? 'on' : 'off'} | threshold ${data.threshold ?? 'n/a'} | base ${data.base_threshold ?? 'n/a'} | ${data.reason || ''}`;
-      await refreshStatus();
-    }
-
-    async function pollLive() {
-      const response = await fetch('/api/live/status');
-      const data = await response.json();
-      const status = data.status || {};
-      document.getElementById('liveStatus').textContent =
-        `${status.status || 'idle'} | ${status.path || 'No file selected'} | last update ${status.updated_at || 'not updated yet'}`;
-      if (status.result) {
-        renderReport(status.result, 'Live monitor');
-      }
-    }
-
-    document.getElementById('analyzeTextBtn').addEventListener('click', analyzeText);
-    document.getElementById('analyzeUploadBtn').addEventListener('click', analyzeUpload);
-    document.getElementById('startLiveBtn').addEventListener('click', startLive);
-    document.getElementById('stopLiveBtn').addEventListener('click', stopLive);
-    document.getElementById('toggleAdaptiveBtn').addEventListener('click', toggleAdaptive);
-    document.getElementById('loadSampleBtn').addEventListener('click', () => {
-      document.getElementById('logText').value = sampleText;
-    });
-    document.getElementById('exportCsvBtn').addEventListener('click', () => {
-      window.open('/api/report/export.csv', '_blank');
-    });
-    document.getElementById('exportJsonBtn').addEventListener('click', () => {
-      window.open('/api/report/export.json', '_blank');
-    });
-    document.getElementById('exportHtmlBtn').addEventListener('click', () => {
-      window.open('/api/report/export.html', '_blank');
-    });
-
-    document.getElementById('logText').value = sampleText;
-    refreshStatus();
-    setInterval(refreshStatus, 6000);
-    setInterval(pollLive, 3000);
-  </script>
-</body>
-</html>
-        """,
-        sample_text=DEFAULT_UPLOAD_TEXT,
+@app.route("/runs/<run_id>")
+def run_detail(run_id: str) -> str:
+    run = _run_by_id(run_id)
+    return render_template(
+        "run_detail.html",
+        active_page="history",
+        bootstrap_data=_bootstrap_payload("run_detail", {"run_id": run["id"]}),
     )
 
 
 @app.route("/api/status")
 def api_status():
     return jsonify(project_status())
+
+
+@app.route("/api/evaluation")
+def api_evaluation():
+    ensure_evaluation_started()
+    return jsonify(EVALUATION_CACHE)
+
+
+@app.route("/api/demo/catalog")
+def api_demo_catalog():
+    return jsonify({"samples": demo_catalog()})
+
+
+@app.route("/api/demo/sample/<sample_id>/text")
+def api_demo_sample_text(sample_id: str):
+    path = _scenario_path(sample_id)
+    return jsonify({"sample": _scenario_meta(sample_id), "text": path.read_text(encoding="utf-8", errors="ignore")})
+
+
+@app.route("/api/demo/sample/<sample_id>/analyze", methods=["POST"])
+def api_demo_sample_analyze(sample_id: str):
+    payload = request.get_json(silent=True) or {}
+    mode = payload.get("mode", "compare")
+    meta = _scenario_meta(sample_id)
+    records = load_records_from_file(Path(meta["path"]))
+    result = apply_mode_filter(workbench.predict_records(records), mode)
+    run = _persist_analysis("scenario", meta["filename"], mode, result, {"sample_id": sample_id})
+    return jsonify({"sample": meta, "run": _run_summary(run), "result": result})
+
+
+@app.route("/api/demo/sample/<sample_id>/download")
+def api_demo_sample_download(sample_id: str):
+    meta = _scenario_meta(sample_id)
+    return send_file(
+        meta["path"],
+        as_attachment=True,
+        download_name=meta["filename"],
+        mimetype="text/plain",
+    )
+
+
+@app.route("/api/demo/replay/start", methods=["POST"])
+def api_demo_replay_start():
+    payload = request.get_json(force=True)
+    sample_id = payload.get("sample_id", "executive-brief")
+    interval = float(payload.get("interval", 0.45))
+    return jsonify(demo_replay.start(sample_id, interval=interval))
+
+
+@app.route("/api/demo/replay/stop", methods=["POST"])
+def api_demo_replay_stop():
+    return jsonify(demo_replay.stop())
 
 
 @app.route("/api/analyze/text", methods=["POST"])
@@ -773,8 +634,8 @@ def api_analyze_text():
     mode = payload.get("mode", "compare")
     records = load_records_from_text(text)
     result = apply_mode_filter(workbench.predict_records(records), mode)
-    _set_current_report("text", "pasted_text.log", mode, result)
-    return jsonify({"result": result})
+    run = _persist_analysis("text", "pasted_text.log", mode, result)
+    return jsonify({"run": _run_summary(run), "result": result})
 
 
 @app.route("/api/analyze/upload", methods=["POST"])
@@ -790,8 +651,19 @@ def api_analyze_upload():
 
     records = load_records_from_file(saved_path)
     result = apply_mode_filter(workbench.predict_records(records), mode)
-    _set_current_report("upload", filename, mode, result)
-    return jsonify({"filename": filename, "result": result})
+    run = _persist_analysis("upload", filename, mode, result, {"saved_path": str(saved_path.resolve())})
+    return jsonify({"filename": filename, "saved_path": str(saved_path.resolve()), "run": _run_summary(run), "result": result})
+
+
+@app.route("/api/runs")
+def api_runs():
+    return jsonify({"runs": _list_runs(), "current_run_id": _current_run()["id"] if _current_run() else None})
+
+
+@app.route("/api/runs/<run_id>")
+def api_run_detail(run_id: str):
+    run = _run_by_id(run_id)
+    return jsonify({"run": {**_run_summary(run), "result": run["result"]}})
 
 
 @app.route("/api/live/start", methods=["POST"])
@@ -800,17 +672,38 @@ def api_live_start():
     path = str(payload.get("path", "")).strip()
     if not path:
         return jsonify({"error": "Path is required."}), 400
+    demo_replay.stop(stop_live=False)
     return jsonify(live_monitor.start(path))
 
 
 @app.route("/api/live/stop", methods=["POST"])
 def api_live_stop():
+    demo_replay.stop(stop_live=False)
     return jsonify(live_monitor.stop())
 
 
 @app.route("/api/live/status")
 def api_live_status():
-    return jsonify({"status": live_monitor.status()})
+    return jsonify({"status": live_monitor.status(), "replay": demo_replay.status()})
+
+
+@app.route("/api/live/save", methods=["POST"])
+def api_live_save():
+    payload = request.get_json(silent=True) or {}
+    status = live_monitor.status()
+    result = status.get("result")
+    if not result:
+        return jsonify({"error": "No live result is available yet."}), 400
+    path = status.get("path") or "live_monitor.log"
+    filename = Path(path).name
+    run = _persist_analysis(
+        "live",
+        filename,
+        payload.get("mode", "compare"),
+        result,
+        {"path": path, "saved_from_live": True},
+    )
+    return jsonify({"run": _run_summary(run), "result": result})
 
 
 @app.route("/api/adaptive/status")
@@ -826,40 +719,40 @@ def api_adaptive_toggle():
 
 @app.route("/api/report/export.json")
 def api_report_export_json():
-    payload = json.dumps(CURRENT_REPORT, indent=2)
+    run = _selected_run(request.args.get("run_id"))
+    payload = json.dumps(run, indent=2)
     return Response(
         payload,
         mimetype="application/json",
-        headers={"Content-Disposition": f"attachment; filename={current_report_filename('json')}"},
+        headers={"Content-Disposition": f"attachment; filename={_run_filename(run, 'json')}"},
     )
 
 
 @app.route("/api/report/export.csv")
 def api_report_export_csv():
-    result = CURRENT_REPORT.get("result") or {"summary": {}, "items": [], "charts": {}}
-    payload = workbench.export_report_csv(result)
+    run = _selected_run(request.args.get("run_id"))
+    payload = workbench.export_report_csv(run.get("result") or _empty_result())
     return Response(
         payload,
         mimetype="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={current_report_filename('csv')}"},
+        headers={"Content-Disposition": f"attachment; filename={_run_filename(run, 'csv')}"},
     )
 
 
 @app.route("/api/report/export.html")
 def api_report_export_html():
-    result = CURRENT_REPORT.get("result") or {"summary": {}, "items": [], "charts": {}}
+    run = _selected_run(request.args.get("run_id"))
     payload = workbench.export_report_html(
-        result,
-        title=f"Anomaly Report: {CURRENT_REPORT.get('filename', 'Current Report')}",
+        run.get("result") or _empty_result(),
+        title=f"Anomaly Report: {run.get('filename', 'Current Report')}",
     )
     return Response(
         payload,
         mimetype="text/html",
-        headers={"Content-Disposition": f"attachment; filename={current_report_filename('html')}"},
+        headers={"Content-Disposition": f"attachment; filename={_run_filename(run, 'html')}"},
     )
 
 
 if __name__ == "__main__":
-    bootstrap_thread = threading.Thread(target=bootstrap_models, daemon=True)
-    bootstrap_thread.start()
+    ensure_bootstrap_started()
     app.run(host="127.0.0.1", port=5000, debug=True)

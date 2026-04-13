@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Run History | CSUF Anomaly Detection Workbench{% endblock %}
+{% block content %}
+  <section class="glass-card section-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Run Archive Service</div>
+        <h1>Archived analysis runs</h1>
+      </div>
+      <div class="section-actions">
+        <a class="primary" href="{{ url_for('analyze_page') }}">Open Analysis Service</a>
+      </div>
+    </div>
+    <p class="section-copy">
+      Text runs, uploaded-file runs, sample runs, bootstrap runs, and archived live snapshots all appear here with their own detail pages.
+    </p>
+    <div class="history-grid" id="historyGrid"></div>
+  </section>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='history.js') }}"></script>
+{% endblock %}

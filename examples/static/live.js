@@ -1,0 +1,105 @@
+(function () {
+  const ui = window.WorkbenchUI;
+  const bootstrap = ui.bootstrap;
+  const params = new URLSearchParams(window.location.search);
+  const requestedSample = params.get("sample");
+  const els = {
+    livePath: document.getElementById("livePath"),
+    startLiveBtn: document.getElementById("startLiveBtn"),
+    stopLiveBtn: document.getElementById("stopLiveBtn"),
+    startReplayBtn: document.getElementById("startReplayBtn"),
+    stopReplayBtn: document.getElementById("stopReplayBtn"),
+    saveLiveBtn: document.getElementById("saveLiveBtn"),
+    liveStatus: document.getElementById("liveStatus"),
+    replayStatus: document.getElementById("replayStatus"),
+    liveSaveStatus: document.getElementById("liveSaveStatus"),
+    trendChart: document.getElementById("trendChart"),
+    pathList: document.getElementById("pathList"),
+    liveHistory: document.getElementById("liveHistory"),
+  };
+
+  async function refresh() {
+    const data = await ui.fetchJSON("/api/live/status");
+    els.liveStatus.textContent = `${data.status?.status || "idle"} | ${data.status?.path || "No live path"} | ${data.status?.updated_at || "not updated yet"}`;
+    els.replayStatus.textContent = `${data.replay?.state || "idle"} | ${data.replay?.message || "Replay idle."}`;
+    ui.renderTrendChart(els.trendChart, data.status?.result);
+    const history = (data.status?.history || []).map((item, index) => ({
+      id: `live-${index}`,
+      filename: `${item.line_count || 0} lines`,
+      created_at: item.timestamp,
+      mode: "compare",
+      source: "live",
+      summary: {
+        window_count: item.line_count,
+        deeplog_anomalies: item.deeplog_anomalies,
+        report_anomalies: item.report_anomalies,
+      },
+      detail_url: "#",
+    }));
+    ui.renderRunCards(els.liveHistory, history, "No live updates yet.");
+  }
+
+  async function startLive() {
+    const data = await ui.fetchJSON("/api/live/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: els.livePath.value }),
+    });
+    els.liveStatus.textContent = `${data.status || data.error} | ${data.path || els.livePath.value}`;
+    refresh();
+  }
+
+  async function stopLive() {
+    await ui.fetchJSON("/api/live/stop", { method: "POST" });
+    refresh();
+  }
+
+  async function startReplay(sampleId) {
+    const data = await ui.fetchJSON("/api/demo/replay/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sample_id: sampleId || bootstrap.featured_sample?.id || "executive-brief" }),
+    });
+    if (data.target_path) els.livePath.value = data.target_path;
+    els.replayStatus.textContent = `${data.state} | ${data.message}`;
+    refresh();
+  }
+
+  async function stopReplay() {
+    const data = await ui.fetchJSON("/api/demo/replay/stop", { method: "POST" });
+    els.replayStatus.textContent = `${data.state} | ${data.message}`;
+    refresh();
+  }
+
+  async function saveLiveSnapshot() {
+    try {
+      const data = await ui.fetchJSON("/api/live/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "compare" }),
+      });
+      els.liveSaveStatus.textContent = `Snapshot saved. Opening run ${data.run.id}.`;
+      window.location.href = data.run.detail_url;
+    } catch (error) {
+      els.liveSaveStatus.textContent = error.message;
+    }
+  }
+
+  ui.renderPathList(els.pathList, bootstrap.sample_catalog || [], {
+    usePath(path) {
+      els.livePath.value = path;
+      els.liveSaveStatus.textContent = "Sample path copied into the live input.";
+    },
+    replaySample: startReplay,
+  });
+
+  els.startLiveBtn.addEventListener("click", startLive);
+  els.stopLiveBtn.addEventListener("click", stopLive);
+  els.startReplayBtn.addEventListener("click", () => startReplay(requestedSample || bootstrap.featured_sample?.id));
+  els.stopReplayBtn.addEventListener("click", stopReplay);
+  els.saveLiveBtn.addEventListener("click", saveLiveSnapshot);
+
+  if (requestedSample) startReplay(requestedSample);
+  refresh();
+  setInterval(refresh, 3000);
+})();
