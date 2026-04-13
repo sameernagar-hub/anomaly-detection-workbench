@@ -76,6 +76,7 @@ http://127.0.0.1:5000/overview
 - [App Services](#app-services)
 - [Typical Workflow](#typical-workflow)
 - [FAQ / Docs Service](#faq--docs-service)
+- [Author](#author)
 - [Project Structure](#project-structure)
 - [Setup And Installation](#setup-and-installation)
 - [How To Run The App](#how-to-run-the-app)
@@ -162,6 +163,18 @@ This page covers:
 - troubleshooting guidance
 
 The interface also includes inline `?` help markers across major controls, metrics, filters, exports, and technical labels.
+
+---
+
+## Author
+
+**Sameer Nagar**
+
+- GitHub: `sameernagar-hub`
+- Project: `Anomaly Detection Workbench`
+- Role: design, implementation, evaluation workflow, interface, and documentation
+
+This project was developed as a graduate-level anomaly-detection workbench focused on drift-aware analysis, argument-aware comparison, live monitoring, evaluation, and archived run review.
 
 ---
 
