@@ -1,0 +1,237 @@
+{
+  "window_size": 10,
+  "key_vocabularies": {
+    "proto": {
+      "__UNK__": 0,
+      "3pc": 1,
+      "aes-sp3-d": 2,
+      "any": 3,
+      "argus": 4,
+      "arp": 5,
+      "ax.25": 6,
+      "br-sat-mon": 7,
+      "cftp": 8,
+      "chaos": 9,
+      "cpnx": 10,
+      "dcn": 11,
+      "ddp": 12,
+      "dgp": 13,
+      "egp": 14,
+      "eigrp": 15,
+      "emcon": 16,
+      "encap": 17,
+      "ggp": 18,
+      "gmtp": 19,
+      "gre": 20,
+      "hmp": 21,
+      "i-nlsp": 22,
+      "idpr": 23,
+      "idpr-cmtp": 24,
+      "idrp": 25,
+      "ifmp": 26,
+      "igmp": 27,
+      "ip": 28,
+      "ipip": 29,
+      "ipnip": 30,
+      "ippc": 31,
+      "ipv6": 32,
+      "ipv6-frag": 33,
+      "ipv6-no": 34,
+      "ipv6-opts": 35,
+      "ipv6-route": 36,
+      "irtp": 37,
+      "kryptolan": 38,
+      "larp": 39,
+      "leaf-1": 40,
+      "leaf-2": 41,
+      "merit-inp": 42,
+      "mfe-nsp": 43,
+      "mhrp": 44,
+      "micp": 45,
+      "mobile": 46,
+      "mtp": 47,
+      "mux": 48,
+      "narp": 49,
+      "netblt": 50,
+      "nsfnet-igp": 51,
+      "nvp": 52,
+      "ospf": 53,
+      "pnni": 54,
+      "pri-enc": 55,
+      "prm": 56,
+      "pup": 57,
+      "pvp": 58,
+      "qnx": 59,
+      "rdp": 60,
+      "rvd": 61,
+      "sat-expak": 62,
+      "sat-mon": 63,
+      "scps": 64,
+      "sctp": 65,
+      "sdrp": 66,
+      "skip": 67,
+      "sprite-rpc": 68,
+      "st2": 69,
+      "sun-nd": 70,
+      "tcf": 71,
+      "tcp": 72,
+      "tlsp": 73,
+      "tp++": 74,
+      "trunk-1": 75,
+      "trunk-2": 76,
+      "ttp": 77,
+      "udp": 78,
+      "vines": 79,
+      "vmtp": 80,
+      "wb-mon": 81,
+      "wsn": 82,
+      "xnet": 83,
+      "xns-idp": 84
+    },
+    "service": {
+      "__UNK__": 0,
+      "-": 1,
+      "dns": 2,
+      "ftp": 3,
+      "ftp-data": 4,
+      "http": 5,
+      "pop3": 6,
+      "smtp": 7,
+      "snmp": 8,
+      "ssh": 9,
+      "ssl": 10
+    },
+    "state": {
+      "__UNK__": 0,
+      "ACC": 1,
+      "CON": 2,
+      "FIN": 3,
+      "INT": 4,
+      "REQ": 5,
+      "RST": 6
+    },
+    "attack_cat": {
+      "__UNK__": 0,
+      "Analysis": 1,
+      "Backdoor": 2,
+      "DoS": 3,
+      "Exploits": 4,
+      "Fuzzers": 5,
+      "Normal": 6,
+      "Reconnaissance": 7,
+      "Shellcode": 8,
+      "Worms": 9
+    }
+  },
+  "key_vocab_sizes": {
+    "proto": 85,
+    "service": 11,
+    "state": 7,
+    "attack_cat": 10
+  },
+  "scaler": {
+    "dur": {
+      "mean": 1.7896330360000001,
+      "std": 5.834605961638025
+    },
+    "spkts": {
+      "mean": 31.974222222222224,
+      "std": 158.74224601170133
+    },
+    "dpkts": {
+      "mean": 38.80488888888889,
+      "std": 260.7869333350906
+    },
+    "sbytes": {
+      "mean": 9864.17911111111,
+      "std": 190681.31275525643
+    },
+    "dbytes": {
+      "mean": 34237.57911111111,
+      "std": 345069.85246497067
+    },
+    "rate": {
+      "mean": 34171.42599338978,
+      "std": 99475.4722423552
+    },
+    "sttl": {
+      "mean": 111.31733333333334,
+      "std": 105.21340730787752
+    },
+    "dttl": {
+      "mean": 68.24933333333334,
+      "std": 94.4044846486531
+    },
+    "sload": {
+      "mean": 43442779.89601887,
+      "std": 197595560.63275653
+    },
+    "dload": {
+      "mean": 1718594.66981228,
+      "std": 3686110.486052697
+    },
+    "sloss": {
+      "mean": 7.094666666666667,
+      "std": 72.17940252823747
+    },
+    "dloss": {
+      "mean": 14.965333333333334,
+      "std": 128.20340660407152
+    },
+    "sinpkt": {
+      "mean": 575.0294900088888,
+      "std": 4699.170520001798
+    },
+    "dinpkt": {
+      "mean": 82.154511504,
+      "std": 969.7977852002463
+    },
+    "smean": {
+      "mean": 143.496,
+      "std": 197.03789873919067
+    },
+    "dmean": {
+      "mean": 219.73466666666667,
+      "std": 309.5545492018419
+    },
+    "ct_srv_src": {
+      "mean": 7.524,
+      "std": 5.928132702068446
+    },
+    "ct_state_ttl": {
+      "mean": 0.8511111111111112,
+      "std": 1.4225364236261966
+    },
+    "ct_dst_ltm": {
+      "mean": 3.055111111111111,
+      "std": 2.8828355040150795
+    },
+    "ct_src_dport_ltm": {
+      "mean": 1.5435555555555556,
+      "std": 1.4332917134353595
+    },
+    "ct_dst_sport_ltm": {
+      "mean": 1.244,
+      "std": 0.9030919726756025
+    },
+    "ct_dst_src_ltm": {
+      "mean": 3.1915555555555555,
+      "std": 5.080439156676454
+    },
+    "ct_src_ltm": {
+      "mean": 3.671111111111111,
+      "std": 3.3449545568892742
+    },
+    "ct_srv_dst": {
+      "mean": 7.065777777777778,
+      "std": 5.65725747804
+    },
+    "is_sm_ips_ports": {
+      "mean": 0.006666666666666667,
+      "std": 0.08137703743822469
+    }
+  },
+  "hidden_dim": 48,
+  "embedding_dim": 8,
+  "threshold": 0.5
+}

@@ -1,0 +1,37 @@
+{
+  "window_size": 10,
+  "deeplog_top_k": 5,
+  "vocabulary": {
+    "__UNK__": 0,
+    "arp|-|CON": 1,
+    "arp|-|INT": 2,
+    "igmp|-|INT": 3,
+    "ospf|-|REQ": 4,
+    "tcp|-|CON": 5,
+    "tcp|-|FIN": 6,
+    "tcp|-|REQ": 7,
+    "tcp|-|RST": 8,
+    "tcp|http|FIN": 9,
+    "udp|-|CON": 10,
+    "udp|-|INT": 11,
+    "udp|dns|CON": 12,
+    "udp|dns|INT": 13
+  },
+  "reverse_vocabulary": {
+    "0": "__UNK__",
+    "1": "arp|-|CON",
+    "2": "arp|-|INT",
+    "3": "igmp|-|INT",
+    "4": "ospf|-|REQ",
+    "5": "tcp|-|CON",
+    "6": "tcp|-|FIN",
+    "7": "tcp|-|REQ",
+    "8": "tcp|-|RST",
+    "9": "tcp|http|FIN",
+    "10": "udp|-|CON",
+    "11": "udp|-|INT",
+    "12": "udp|dns|CON",
+    "13": "udp|dns|INT"
+  },
+  "train_size": 1200
+}
