@@ -4,11 +4,31 @@
   <section class="hero-card">
     <div class="hero-copy">
       <div class="eyebrow">System Overview</div>
-      <h1>Check anomaly detection status, review the latest run, and open the part of the project you need.</h1>
+      <h1>Anomaly Detection Workbench</h1>
       <p>
-        Use this page to check model readiness, review the latest anomaly detection result, and open analysis,
-        live monitoring, evaluation, or archived runs without mixing live updates into saved results.
+        An interactive anomaly-detection system for structured log analysis with separate services 
+        for analysis, live monitoring, evaluation, and archived run review.
       </p>
+      <div class="slide-shell">
+        <div class="slide-header">
+          <div>
+            <div class="eyebrow">Live Project Snapshot</div>
+            <strong id="slideTitle">Preparing latest results</strong>
+          </div>
+          <div class="slide-controls">
+            <button class="ghost compact" id="slidePrev" type="button" aria-label="Previous slide">Prev</button>
+            <button class="ghost compact" id="slideNext" type="button" aria-label="Next slide">Next</button>
+          </div>
+        </div>
+        <div class="slide-body">
+          <div class="slide-metric" id="slideMetric">Waiting</div>
+          <div class="slide-text">
+            <div class="slide-meta" id="slideMeta">Recent activity will appear here.</div>
+            <p id="slideBody">This panel rotates the latest run summary, evaluation snapshot, and live-monitor activity.</p>
+          </div>
+        </div>
+        <div class="slide-dots" id="slideDots"></div>
+      </div>
       <div class="control-row wrap">
         <a class="primary" href="{{ url_for('analyze_page') }}">Open Analysis</a>
         <a class="ghost" href="{{ url_for('history_page') }}">Open Run Archive</a>
