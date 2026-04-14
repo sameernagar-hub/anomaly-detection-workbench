@@ -4,13 +4,13 @@
   <section class="hero-card">
     <div class="hero-copy">
       <div class="eyebrow">System Overview</div>
-      <h1>Operational services for analysis, live monitoring, evaluation, and archived runs.</h1>
+      <h1>Check anomaly detection status, review the latest run, and open the part of the project you need.</h1>
       <p>
-        Use this page to check service health, review the latest saved run, and move into the specific service
-        area you need without mixing live updates into archived results.
+        Use this page to check model readiness, review the latest anomaly detection result, and open analysis,
+        live monitoring, evaluation, or archived runs without mixing live updates into saved results.
       </p>
       <div class="control-row wrap">
-        <a class="primary" href="{{ url_for('analyze_page') }}">Open Analysis Service</a>
+        <a class="primary" href="{{ url_for('analyze_page') }}">Open Analysis</a>
         <a class="ghost" href="{{ url_for('history_page') }}">Open Run Archive</a>
         <a class="ghost" href="{{ url_for('live_page') }}">Open Live Monitoring</a>
       </div>
@@ -112,25 +112,25 @@
         <div class="section-head">
           <div>
             <div class="eyebrow">Service map</div>
-            <h2>Service windows</h2>
+            <h2>Project areas</h2>
           </div>
         </div>
         <div class="feature-grid">
           <a class="feature-card" href="{{ url_for('analyze_page') }}">
-            <strong>Analysis Service</strong>
-            <p>Submit text, uploaded files, or sample scenarios and create a saved run record with its own results page.</p>
+            <strong>Analysis</strong>
+            <p>Run anomaly detection on pasted text, uploaded logs, or prepared samples and save the result as a new run.</p>
           </a>
           <a class="feature-card" href="{{ url_for('live_page') }}">
-            <strong>Live Monitoring Service</strong>
-            <p>Monitor replay and file-tail streams in a separate service view, then save stable checkpoints when needed.</p>
+            <strong>Live Monitoring</strong>
+            <p>Watch anomaly scores update as a file grows or a replay stream runs, then archive a snapshot when you want a stable result.</p>
           </a>
           <a class="feature-card" href="{{ url_for('evaluation_page') }}">
-            <strong>Evaluation Service</strong>
-            <p>Review benchmark metrics, performance deltas, and cross-host proxy results without analysis controls on screen.</p>
+            <strong>Evaluation</strong>
+            <p>Compare the baseline sequence model and the argument-aware model using benchmark metrics and cross-host proxy results.</p>
           </a>
           <a class="feature-card" href="{{ url_for('history_page') }}">
             <strong>Run Archive</strong>
-            <p>Open saved runs later and inspect their frozen charts, evidence tables, exports, and metadata.</p>
+            <p>Reopen saved anomaly detection runs later and inspect their charts, evidence tables, exports, and metadata.</p>
           </a>
         </div>
       </section>

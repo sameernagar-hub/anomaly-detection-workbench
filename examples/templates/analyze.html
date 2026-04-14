@@ -4,8 +4,8 @@
   <section class="glass-card section-card">
     <div class="section-head">
       <div>
-        <div class="eyebrow">Analysis Service</div>
-        <h1>Create a new run</h1>
+        <div class="eyebrow">Analysis</div>
+        <h1>Run anomaly detection on logs or sample inputs</h1>
       </div>
       <div class="mode-switch">
         <label class="field-label" for="analysisMode">Result mode <button class="info-dot" type="button" data-tooltip="Choose whether the saved run should show both models together or only one model at a time." aria-label="Explain result mode">?</button></label>
@@ -19,7 +19,7 @@
 
     <div class="studio-grid">
       <div class="composer-panel">
-        <label class="field-label" for="logText">Input text service <button class="info-dot" type="button" data-tooltip="Paste structured log lines here to run analysis without uploading a file." aria-label="Explain input text service">?</button></label>
+        <label class="field-label" for="logText">Input text <button class="info-dot" type="button" data-tooltip="Paste structured log lines here to run anomaly detection without uploading a file." aria-label="Explain input text">?</button></label>
         <textarea id="logText"></textarea>
         <div class="control-row wrap">
           <button class="primary" id="analyzeTextBtn" data-tooltip="Runs inference on the text currently shown in the input area and saves the result as a run." aria-label="Explain run text analysis">Run text analysis</button>
@@ -30,14 +30,14 @@
 
       <div class="utility-panel">
         <div class="upload-block inset-card">
-          <label class="field-label" for="uploadFile">File analysis service <button class="info-dot" type="button" data-tooltip="Upload a local log file to analyze it and save the result as a new run." aria-label="Explain file analysis service">?</button></label>
+          <label class="field-label" for="uploadFile">File analysis <button class="info-dot" type="button" data-tooltip="Upload a local log file to analyze it and save the result as a new run." aria-label="Explain file analysis">?</button></label>
           <input type="file" id="uploadFile" accept=".txt,.log,.csv">
           <button class="ghost" id="analyzeUploadBtn" data-tooltip="Runs inference on the currently selected upload file." aria-label="Explain run file analysis">Run file analysis</button>
         </div>
 
         <div class="status-blade" id="analysisStatus">Choose a sample source, paste text, or upload a file to create a run.</div>
         <div class="report-card subtle">
-          Every analysis request creates a saved run record and opens a dedicated run details page.
+          Every analysis request creates a saved anomaly detection run and opens a dedicated run details page.
         </div>
       </div>
     </div>
