@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import json
+import os
+import secrets
 import threading
 import time
 import uuid
-from collections import deque
 from datetime import datetime
+from functools import wraps
 from pathlib import Path
 import sys
-from typing import Any, Deque, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from flask import Flask, Response, abort, jsonify, redirect, render_template, request, send_file, url_for
 from werkzeug.utils import secure_filename
@@ -17,25 +19,39 @@ BASE_DIR = Path(__file__).resolve().parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
+from auth import auth_bp, current_profile, current_user, login_required
+from db import connect_db, get_db_path, init_db, load_json
+from emailer import Mailer
 from workbench import DEFAULT_UPLOAD_TEXT, AnomalyWorkbench, LiveMonitor, load_records_from_file, load_records_from_text
 
 
 app = Flask(__name__)
+app.config.update(
+    SECRET_KEY=os.getenv("WORKBENCH_SECRET_KEY") or secrets.token_urlsafe(32),
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.getenv("WORKBENCH_SECURE_COOKIE", "0") == "1",
+    MAX_CONTENT_LENGTH=16 * 1024 * 1024,
+)
+
+RUNTIME_DIR = BASE_DIR / "runtime"
+RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 DEMO_RUNTIME_DIR = BASE_DIR / "demo_runtime"
 DEMO_RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
 SAMPLE_DIR = BASE_DIR / "sample_data"
 
+database = connect_db(get_db_path(BASE_DIR))
+init_db(database)
+app.config["DB"] = database
+app.config["MAILER"] = Mailer(RUNTIME_DIR)
+app.config["RUNTIME_DIR"] = RUNTIME_DIR
+app.register_blueprint(auth_bp)
+
 MODEL_NAMES = {
-    "baseline": {
-        "label": "Baseline Sentinel",
-        "subtitle": "Baseline sequence model",
-    },
-    "improved": {
-        "label": "Apex Insight",
-        "subtitle": "Improved argument-aware model",
-    },
+    "baseline": {"label": "Baseline Sentinel", "subtitle": "Baseline sequence model"},
+    "improved": {"label": "Apex Insight", "subtitle": "Improved argument-aware model"},
 }
 
 SAMPLE_SCENARIOS = [
@@ -78,30 +94,22 @@ SAMPLE_SCENARIOS = [
 ]
 
 workbench = AnomalyWorkbench(BASE_DIR)
-live_monitor = LiveMonitor(workbench)
-
-RUN_LIMIT = 80
-RUN_ORDER: Deque[str] = deque(maxlen=RUN_LIMIT)
-RUN_STORE: Dict[str, Dict[str, Any]] = {}
-RUN_LOCK = threading.Lock()
-CURRENT_RUN_ID: Optional[str] = None
-
-BOOTSTRAP_STATUS: Dict[str, Any] = {
-    "state": "starting",
-    "message": "Warming the anomaly showcase...",
-    "details": {},
-}
-
-EVALUATION_CACHE: Dict[str, Any] = {
-    "state": "idle",
-    "message": "Evaluation snapshot has not run yet.",
-    "updated_at": None,
-    "benchmark": None,
-}
-
+BOOTSTRAP_STATUS: Dict[str, Any] = {"state": "starting", "message": "Warming the anomaly showcase...", "details": {}}
+EVALUATION_CACHE: Dict[str, Any] = {"state": "idle", "message": "Evaluation snapshot has not run yet.", "updated_at": None, "benchmark": None}
 BOOTSTRAP_LOCK = threading.Lock()
 BOOTSTRAP_THREAD: Optional[threading.Thread] = None
 EVALUATION_THREAD: Optional[threading.Thread] = None
+USER_STATE_LOCK = threading.Lock()
+USER_LIVE_MONITORS: Dict[int, LiveMonitor] = {}
+USER_REPLAYS: Dict[int, "DemoReplay"] = {}
+USER_LIVE_CONTEXT: Dict[int, Dict[str, Any]] = {}
+RUN_LIMIT = 80
+BUFFER_ROTATION_MESSAGES = [
+    "Preparing your workbench services...",
+    "Personalizing your environment...",
+    "Loading anomaly detection models...",
+    "Tuning your secure workspace session...",
+]
 
 
 def _scenario_path(sample_id: str) -> Path:
@@ -115,14 +123,8 @@ def _scenario_meta(sample_id: str) -> Dict[str, Any]:
     for scenario in SAMPLE_SCENARIOS:
         if scenario["id"] == sample_id:
             path = SAMPLE_DIR / scenario["filename"]
-            line_count = 0
-            if path.exists():
-                line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
-            return {
-                **scenario,
-                "path": str(path.resolve()),
-                "line_count": line_count,
-            }
+            line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines()) if path.exists() else 0
+            return {**scenario, "path": str(path.resolve()), "line_count": line_count}
     raise KeyError(f"Unknown scenario '{sample_id}'")
 
 
@@ -142,79 +144,103 @@ def _summary_for(result: Dict[str, Any]) -> Dict[str, Any]:
     return dict((result or {}).get("summary") or {})
 
 
+def _db():
+    return app.config["DB"]
+
+
+def _user_upload_dir(user_id: int) -> Path:
+    path = UPLOAD_DIR / f"user_{user_id}"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _row_to_run(row: Any) -> Dict[str, Any]:
+    run = dict(row)
+    return {
+        "id": run["run_key"],
+        "source": run["source"],
+        "filename": run["filename"],
+        "created_at": run["created_at"],
+        "mode": run["mode"],
+        "summary": load_json(run["summary_json"], {}),
+        "result": load_json(run["result_json"], _empty_result()),
+        "metadata": load_json(run["metadata_json"], {}),
+    }
+
+
 def _run_summary(run: Dict[str, Any]) -> Dict[str, Any]:
-    summary = run.get("summary", {})
     return {
         "id": run["id"],
         "source": run["source"],
         "filename": run["filename"],
         "created_at": run["created_at"],
         "mode": run["mode"],
-        "summary": summary,
+        "summary": run.get("summary", {}),
         "metadata": run.get("metadata", {}),
         "detail_url": url_for("run_detail", run_id=run["id"]),
     }
 
 
-def _list_runs() -> List[Dict[str, Any]]:
-    with RUN_LOCK:
-        return [_run_summary(RUN_STORE[run_id]) for run_id in RUN_ORDER if run_id in RUN_STORE]
+def _list_runs(user_id: int) -> List[Dict[str, Any]]:
+    rows = _db().execute(
+        "SELECT * FROM user_runs WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+        (user_id, RUN_LIMIT),
+    ).fetchall()
+    return [_run_summary(_row_to_run(row)) for row in rows]
 
 
-def _current_run() -> Optional[Dict[str, Any]]:
-    with RUN_LOCK:
-        if CURRENT_RUN_ID and CURRENT_RUN_ID in RUN_STORE:
-            return RUN_STORE[CURRENT_RUN_ID]
-    return None
+def _current_run(user_id: int) -> Optional[Dict[str, Any]]:
+    row = _db().execute(
+        "SELECT * FROM user_runs WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
+        (user_id,),
+    ).fetchone()
+    return _row_to_run(row) if row else None
 
 
-def _store_run(source: str, filename: str, mode: str, result: Dict[str, Any], metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    global CURRENT_RUN_ID
-    run_id = uuid.uuid4().hex[:10]
-    run = {
-        "id": run_id,
-        "source": source,
-        "filename": filename,
-        "created_at": _timestamp(),
-        "mode": mode,
-        "summary": _summary_for(result),
-        "result": result,
-        "metadata": metadata or {},
+def _store_run(user_id: int, source: str, filename: str, mode: str, result: Dict[str, Any], metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    run_key = uuid.uuid4().hex[:10]
+    payload = {
+        "summary_json": json.dumps(_summary_for(result)),
+        "result_json": json.dumps(result),
+        "metadata_json": json.dumps(metadata or {}),
     }
-    with RUN_LOCK:
-        RUN_STORE[run_id] = run
-        RUN_ORDER.appendleft(run_id)
-        CURRENT_RUN_ID = run_id
-        while len(RUN_ORDER) > RUN_LIMIT:
-            stale_id = RUN_ORDER.pop()
-            RUN_STORE.pop(stale_id, None)
-    return run
+    _db().execute(
+        """
+        INSERT INTO user_runs (user_id, run_key, source, filename, created_at, mode, summary_json, result_json, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (user_id, run_key, source, filename, _timestamp(), mode, payload["summary_json"], payload["result_json"], payload["metadata_json"]),
+    )
+    _db().commit()
+    return _run_by_id(user_id, run_key)
 
 
-def _run_by_id(run_id: str) -> Dict[str, Any]:
-    with RUN_LOCK:
-        run = RUN_STORE.get(run_id)
-    if run is None:
+def _run_by_id(user_id: int, run_id: str) -> Dict[str, Any]:
+    row = _db().execute(
+        "SELECT * FROM user_runs WHERE user_id = ? AND run_key = ?",
+        (user_id, run_id),
+    ).fetchone()
+    if row is None:
         abort(404, description=f"Run '{run_id}' was not found.")
-    return run
+    return _row_to_run(row)
 
 
-def _selected_run(run_id: Optional[str]) -> Dict[str, Any]:
+def _selected_run(user_id: int, run_id: Optional[str]) -> Dict[str, Any]:
     if run_id:
-        return _run_by_id(run_id)
-    run = _current_run()
-    if run is None:
-        return {
-            "id": None,
-            "source": "none",
-            "filename": "No report yet",
-            "created_at": None,
-            "mode": "compare",
-            "summary": {},
-            "result": _empty_result(),
-            "metadata": {},
-        }
-    return run
+        return _run_by_id(user_id, run_id)
+    run = _current_run(user_id)
+    if run:
+        return run
+    return {
+        "id": None,
+        "source": "none",
+        "filename": "No report yet",
+        "created_at": None,
+        "mode": "compare",
+        "summary": {},
+        "result": _empty_result(),
+        "metadata": {},
+    }
 
 
 def _run_filename(run: Dict[str, Any], extension: str) -> str:
@@ -223,9 +249,20 @@ def _run_filename(run: Dict[str, Any], extension: str) -> str:
     return f"{stem}_{mode}.{extension}"
 
 
-def _bootstrap_payload(page: str, extras: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def _persist_analysis(user_id: int, source: str, filename: str, mode: str, result: Dict[str, Any], metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    user = current_user() or {}
+    profile = current_profile() or {}
+    enriched = dict(metadata or {})
+    enriched.setdefault("public_user_id", user.get("public_user_id"))
+    enriched.setdefault("display_name", profile.get("display_name"))
+    return _store_run(user_id, source, filename, mode, result, enriched)
+
+
+def _user_bootstrap(page: str, extras: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     featured = _scenario_meta("executive-brief")
-    current_run = _current_run()
+    user = current_user()
+    profile = current_profile()
+    current_run = _current_run(int(user["id"])) if user else None
     payload = {
         "page": page,
         "sample_text": Path(featured["path"]).read_text(encoding="utf-8", errors="ignore"),
@@ -234,6 +271,17 @@ def _bootstrap_payload(page: str, extras: Optional[Dict[str, Any]] = None) -> Di
         "featured_sample": featured,
         "default_upload_text": DEFAULT_UPLOAD_TEXT,
         "current_run_id": current_run["id"] if current_run else None,
+        "current_user": {
+            "email": user["email"],
+            "display_name": (profile or {}).get("display_name"),
+            "full_name": (profile or {}).get("full_name"),
+            "public_user_id": user.get("public_user_id"),
+        } if user else None,
+        "preferences": {
+            "theme": (profile or {}).get("preferred_theme", "campus"),
+            "analysis_mode": (profile or {}).get("preferred_analysis_mode", "compare"),
+            "live_trace_os": (profile or {}).get("live_trace_os_preference", "Windows"),
+        },
     }
     if extras:
         payload.update(extras)
@@ -263,14 +311,7 @@ def _build_benchmark_payload() -> Dict[str, Any]:
                     improved_wins += 1
             elif improved_value > baseline_value:
                 improved_wins += 1
-        metric_rows.append(
-            {
-                "metric": metric_name,
-                "baseline": baseline_value,
-                "improved": improved_value,
-                "delta": delta,
-            }
-        )
+        metric_rows.append({"metric": metric_name, "baseline": baseline_value, "improved": improved_value, "delta": delta})
 
     folds = cross_host.get("folds", [])
     baseline_cross = [fold.get("deeplog_accuracy") for fold in folds if fold.get("deeplog_accuracy") is not None]
@@ -280,13 +321,11 @@ def _build_benchmark_payload() -> Dict[str, Any]:
         "baseline_avg_accuracy": round(sum(baseline_cross) / len(baseline_cross), 3) if baseline_cross else None,
         "improved_avg_accuracy": round(sum(improved_cross) / len(improved_cross), 3) if improved_cross else None,
     }
-    if cross_summary["baseline_avg_accuracy"] is not None and cross_summary["improved_avg_accuracy"] is not None:
-        cross_summary["delta"] = round(
-            cross_summary["improved_avg_accuracy"] - cross_summary["baseline_avg_accuracy"],
-            3,
-        )
-    else:
-        cross_summary["delta"] = None
+    cross_summary["delta"] = (
+        round(cross_summary["improved_avg_accuracy"] - cross_summary["baseline_avg_accuracy"], 3)
+        if cross_summary["baseline_avg_accuracy"] is not None and cross_summary["improved_avg_accuracy"] is not None
+        else None
+    )
 
     headline = {
         "window_count": summary.get("window_count", 0),
@@ -301,15 +340,8 @@ def _build_benchmark_payload() -> Dict[str, Any]:
     }
 
     return {
-        "standard": {
-            "summary": summary,
-            "metric_rows": metric_rows,
-        },
-        "cross_host": {
-            "note": cross_host.get("note"),
-            "summary": cross_summary,
-            "folds": folds,
-        },
+        "standard": {"summary": summary, "metric_rows": metric_rows},
+        "cross_host": {"note": cross_host.get("note"), "summary": cross_summary, "folds": folds},
         "headline": headline,
     }
 
@@ -343,9 +375,6 @@ def ensure_evaluation_started() -> None:
 def bootstrap_models() -> None:
     try:
         details = workbench.ensure_ready()
-        featured_sample = _scenario_meta("executive-brief")
-        sample_result = workbench.predict_records(load_records_from_file(Path(featured_sample["path"])))
-        _store_run("bootstrap", featured_sample["filename"], "compare", sample_result, {"sample_id": "executive-brief"})
         BOOTSTRAP_STATUS["state"] = "ready"
         BOOTSTRAP_STATUS["message"] = "Models are warm and the workbench is ready."
         BOOTSTRAP_STATUS["details"] = details
@@ -362,15 +391,47 @@ def ensure_bootstrap_started() -> None:
             return
         if BOOTSTRAP_STATUS["state"] == "ready":
             return
+        BOOTSTRAP_STATUS["state"] = "starting"
+        BOOTSTRAP_STATUS["message"] = "Preparing your workbench and loading detection services..."
         BOOTSTRAP_THREAD = threading.Thread(target=bootstrap_models, daemon=True)
         BOOTSTRAP_THREAD.start()
+
+
+def _normalized_next_path(candidate: Optional[str]) -> str:
+    value = str(candidate or "").strip()
+    if not value or not value.startswith("/") or value.startswith("//"):
+        return url_for("overview")
+    if value.startswith("/auth/") or value.startswith("/workspace-buffer"):
+        return url_for("overview")
+    return value
+
+
+def _request_wants_json() -> bool:
+    accept = request.headers.get("Accept", "")
+    return request.path.startswith("/api/") or "application/json" in accept
+
+
+def workbench_ready_required(view):
+    @wraps(view)
+    def wrapped(*args: Any, **kwargs: Any) -> Any:
+        if BOOTSTRAP_STATUS.get("state") == "ready":
+            return view(*args, **kwargs)
+        next_path = _normalized_next_path(request.full_path if request.query_string else request.path)
+        if _request_wants_json():
+            return jsonify({
+                "error": "The workbench is still preparing your environment.",
+                "bootstrap": BOOTSTRAP_STATUS,
+                "redirect": url_for("buffer_page", next=next_path),
+            }), 503
+        return redirect(url_for("buffer_page", next=next_path))
+
+    return wrapped
 
 
 def apply_mode_filter(result: Dict[str, Any], mode: str) -> Dict[str, Any]:
     if mode == "compare":
         result["summary"]["active_model"] = "Dual Command View"
         return result
-
     filtered_items = []
     for item in result["items"]:
         current = dict(item)
@@ -384,25 +445,15 @@ def apply_mode_filter(result: Dict[str, Any], mode: str) -> Dict[str, Any]:
             current["deeplog_top_matches"] = []
             current["agreement"] = None
         filtered_items.append(current)
-
     filtered_summary = dict(result["summary"])
-    if mode == "deeplog":
-        filtered_summary["active_model"] = MODEL_NAMES["baseline"]["label"]
-    elif mode == "report":
-        filtered_summary["active_model"] = MODEL_NAMES["improved"]["label"]
-    else:
-        filtered_summary["active_model"] = "Dual Command View"
-
-    return {
-        "summary": filtered_summary,
-        "items": filtered_items,
-        "charts": result["charts"],
-    }
+    filtered_summary["active_model"] = MODEL_NAMES["baseline"]["label"] if mode == "deeplog" else MODEL_NAMES["improved"]["label"] if mode == "report" else "Dual Command View"
+    return {"summary": filtered_summary, "items": filtered_items, "charts": result["charts"]}
 
 
 class DemoReplay:
-    def __init__(self, live_monitor_: LiveMonitor) -> None:
+    def __init__(self, live_monitor_: LiveMonitor, runtime_suffix: str) -> None:
         self.live_monitor = live_monitor_
+        self.runtime_suffix = runtime_suffix
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._status: Dict[str, Any] = {
@@ -417,7 +468,7 @@ class DemoReplay:
 
     def start(self, sample_id: str, interval: float = 0.45) -> Dict[str, Any]:
         source_path = _scenario_path(sample_id)
-        target_path = DEMO_RUNTIME_DIR / f"{sample_id}_live.log"
+        target_path = DEMO_RUNTIME_DIR / f"{sample_id}_{self.runtime_suffix}_live.log"
         self.stop(stop_live=False)
         target_path.write_text("", encoding="utf-8")
         self._stop.clear()
@@ -431,11 +482,7 @@ class DemoReplay:
             "message": f"Preparing replay from {source_path.name}.",
         }
         self.live_monitor.start(str(target_path))
-        self._thread = threading.Thread(
-            target=self._run,
-            args=(sample_id, source_path, target_path, interval),
-            daemon=True,
-        )
+        self._thread = threading.Thread(target=self._run, args=(sample_id, source_path, target_path, interval), daemon=True)
         self._thread.start()
         return self.status()
 
@@ -475,11 +522,23 @@ class DemoReplay:
         self._status["message"] = "Replay complete. Live monitor will keep the final stream loaded."
 
 
-demo_replay = DemoReplay(live_monitor)
+def _user_services(user_id: int) -> Tuple[LiveMonitor, DemoReplay]:
+    with USER_STATE_LOCK:
+        live_monitor = USER_LIVE_MONITORS.get(user_id)
+        replay = USER_REPLAYS.get(user_id)
+        if live_monitor is None:
+            live_monitor = LiveMonitor(workbench)
+            USER_LIVE_MONITORS[user_id] = live_monitor
+        if replay is None:
+            replay = DemoReplay(live_monitor, runtime_suffix=f"user_{user_id}")
+            USER_REPLAYS[user_id] = replay
+        return live_monitor, replay
 
 
-def project_status() -> Dict[str, Any]:
-    current_run = _current_run()
+def project_status(user_id: int) -> Dict[str, Any]:
+    current_run = _current_run(user_id)
+    live_monitor, replay = _user_services(user_id)
+    live_context = USER_LIVE_CONTEXT.get(user_id, {})
     return {
         "bootstrap": BOOTSTRAP_STATUS,
         "artifacts": {
@@ -488,280 +547,341 @@ def project_status() -> Dict[str, Any]:
         },
         "adaptive": workbench.get_adaptive_status(),
         "live": live_monitor.status(),
-        "replay": demo_replay.status(),
-        "recent_runs": _list_runs(),
+        "replay": replay.status(),
+        "recent_runs": _list_runs(user_id),
         "current_run": _run_summary(current_run) if current_run else None,
         "current_result": current_run["result"] if current_run else None,
         "model_names": MODEL_NAMES,
-        "evaluation": {
-            "state": EVALUATION_CACHE["state"],
-            "message": EVALUATION_CACHE["message"],
-            "updated_at": EVALUATION_CACHE["updated_at"],
+        "evaluation": {"state": EVALUATION_CACHE["state"], "message": EVALUATION_CACHE["message"], "updated_at": EVALUATION_CACHE["updated_at"]},
+        "user": {
+            "email": current_user()["email"] if current_user() else None,
+            "display_name": (current_profile() or {}).get("display_name"),
+            "preferred_theme": (current_profile() or {}).get("preferred_theme"),
+            "public_user_id": current_user().get("public_user_id") if current_user() else None,
         },
+        "live_context": live_context,
     }
-
-
-def _persist_analysis(source: str, filename: str, mode: str, result: Dict[str, Any], metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    return _store_run(source, filename, mode, result, metadata)
-
-
-@app.before_request
-def _ensure_background_tasks() -> None:
-    ensure_bootstrap_started()
 
 
 @app.route("/")
 def home() -> Response:
+    if not current_user():
+        return redirect(url_for("auth.login"))
+    if BOOTSTRAP_STATUS.get("state") != "ready":
+        return redirect(url_for("buffer_page"))
     return redirect(url_for("overview"))
 
 
-@app.route("/overview")
-def overview() -> str:
+@app.route("/workspace-buffer")
+@login_required
+def buffer_page() -> str | Response:
+    next_path = _normalized_next_path(request.args.get("next"))
+    if BOOTSTRAP_STATUS.get("state") == "ready":
+        return redirect(next_path)
+    ensure_bootstrap_started()
     return render_template(
-        "overview.html",
-        active_page="overview",
-        bootstrap_data=_bootstrap_payload("overview"),
+        "buffer.html",
+        active_page="buffer",
+        bootstrap_data=_user_bootstrap("buffer", {"buffer": {"next_path": next_path, "messages": BUFFER_ROTATION_MESSAGES}}),
+        next_path=next_path,
+        buffer_messages=BUFFER_ROTATION_MESSAGES,
+        bootstrap_state=BOOTSTRAP_STATUS,
     )
+
+
+@app.route("/overview")
+@login_required
+@workbench_ready_required
+def overview() -> str:
+    return render_template("overview.html", active_page="overview", bootstrap_data=_user_bootstrap("overview"))
 
 
 @app.route("/analyze")
+@login_required
+@workbench_ready_required
 def analyze_page() -> str:
-    return render_template(
-        "analyze.html",
-        active_page="analyze",
-        bootstrap_data=_bootstrap_payload("analyze"),
-    )
+    return render_template("analyze.html", active_page="analyze", bootstrap_data=_user_bootstrap("analyze"))
 
 
 @app.route("/live")
+@login_required
+@workbench_ready_required
 def live_page() -> str:
-    return render_template(
-        "live.html",
-        active_page="live",
-        bootstrap_data=_bootstrap_payload("live"),
-    )
+    return render_template("live.html", active_page="live", bootstrap_data=_user_bootstrap("live"))
 
 
 @app.route("/evaluation")
+@login_required
+@workbench_ready_required
 def evaluation_page() -> str:
-    return render_template(
-        "evaluation.html",
-        active_page="evaluation",
-        bootstrap_data=_bootstrap_payload("evaluation"),
-    )
+    return render_template("evaluation.html", active_page="evaluation", bootstrap_data=_user_bootstrap("evaluation"))
 
 
 @app.route("/docs")
+@login_required
+@workbench_ready_required
 def docs_page() -> str:
-    return render_template(
-        "docs.html",
-        active_page="docs",
-        bootstrap_data=_bootstrap_payload("docs"),
-    )
+    return render_template("docs.html", active_page="docs", bootstrap_data=_user_bootstrap("docs"))
 
 
 @app.route("/history")
+@login_required
+@workbench_ready_required
 def history_page() -> str:
-    return render_template(
-        "history.html",
-        active_page="history",
-        bootstrap_data=_bootstrap_payload("history"),
-    )
+    return render_template("history.html", active_page="history", bootstrap_data=_user_bootstrap("history"))
 
 
 @app.route("/runs/<run_id>")
+@login_required
+@workbench_ready_required
 def run_detail(run_id: str) -> str:
-    run = _run_by_id(run_id)
-    return render_template(
-        "run_detail.html",
-        active_page="history",
-        bootstrap_data=_bootstrap_payload("run_detail", {"run_id": run["id"]}),
-    )
+    user = current_user()
+    _run_by_id(int(user["id"]), run_id)
+    return render_template("run_detail.html", active_page="history", bootstrap_data=_user_bootstrap("run_detail", {"run_id": run_id}))
 
 
 @app.route("/api/status")
+@login_required
 def api_status():
-    return jsonify(project_status())
+    user = current_user()
+    return jsonify(project_status(int(user["id"])))
 
 
 @app.route("/api/evaluation")
+@login_required
+@workbench_ready_required
 def api_evaluation():
     ensure_evaluation_started()
     return jsonify(EVALUATION_CACHE)
 
 
+@app.route("/api/bootstrap/retry", methods=["POST"])
+@login_required
+def api_bootstrap_retry():
+    ensure_bootstrap_started()
+    return jsonify({"bootstrap": BOOTSTRAP_STATUS})
+
+
 @app.route("/api/demo/catalog")
+@login_required
+@workbench_ready_required
 def api_demo_catalog():
     return jsonify({"samples": demo_catalog()})
 
 
 @app.route("/api/demo/sample/<sample_id>/text")
+@login_required
+@workbench_ready_required
 def api_demo_sample_text(sample_id: str):
     path = _scenario_path(sample_id)
     return jsonify({"sample": _scenario_meta(sample_id), "text": path.read_text(encoding="utf-8", errors="ignore")})
 
 
 @app.route("/api/demo/sample/<sample_id>/analyze", methods=["POST"])
+@login_required
+@workbench_ready_required
 def api_demo_sample_analyze(sample_id: str):
+    user = current_user()
     payload = request.get_json(silent=True) or {}
-    mode = payload.get("mode", "compare")
+    mode = payload.get("mode", (current_profile() or {}).get("preferred_analysis_mode", "compare"))
     meta = _scenario_meta(sample_id)
     records = load_records_from_file(Path(meta["path"]))
     result = apply_mode_filter(workbench.predict_records(records), mode)
-    run = _persist_analysis("scenario", meta["filename"], mode, result, {"sample_id": sample_id})
+    run = _persist_analysis(int(user["id"]), "scenario", meta["filename"], mode, result, {"sample_id": sample_id})
     return jsonify({"sample": meta, "run": _run_summary(run), "result": result})
 
 
 @app.route("/api/demo/sample/<sample_id>/download")
+@login_required
+@workbench_ready_required
 def api_demo_sample_download(sample_id: str):
     meta = _scenario_meta(sample_id)
-    return send_file(
-        meta["path"],
-        as_attachment=True,
-        download_name=meta["filename"],
-        mimetype="text/plain",
-    )
+    return send_file(meta["path"], as_attachment=True, download_name=meta["filename"], mimetype="text/plain")
 
 
 @app.route("/api/demo/replay/start", methods=["POST"])
+@login_required
+@workbench_ready_required
 def api_demo_replay_start():
+    user = current_user()
     payload = request.get_json(force=True)
     sample_id = payload.get("sample_id", "executive-brief")
     interval = float(payload.get("interval", 0.45))
-    return jsonify(demo_replay.start(sample_id, interval=interval))
+    system = str(payload.get("system", (current_profile() or {}).get("live_trace_os_preference", "Windows"))).strip() or "Windows"
+    _, replay = _user_services(int(user["id"]))
+    USER_LIVE_CONTEXT[int(user["id"])] = {"system": system, "sample_id": sample_id, "public_user_id": user.get("public_user_id")}
+    return jsonify(replay.start(sample_id, interval=interval))
 
 
 @app.route("/api/demo/replay/stop", methods=["POST"])
+@login_required
+@workbench_ready_required
 def api_demo_replay_stop():
-    return jsonify(demo_replay.stop())
+    user = current_user()
+    _, replay = _user_services(int(user["id"]))
+    return jsonify(replay.stop())
 
 
 @app.route("/api/analyze/text", methods=["POST"])
+@login_required
+@workbench_ready_required
 def api_analyze_text():
+    user = current_user()
     payload = request.get_json(force=True)
     text = payload.get("text", "")
-    mode = payload.get("mode", "compare")
+    mode = payload.get("mode", (current_profile() or {}).get("preferred_analysis_mode", "compare"))
     records = load_records_from_text(text)
     result = apply_mode_filter(workbench.predict_records(records), mode)
-    run = _persist_analysis("text", "pasted_text.log", mode, result)
+    run = _persist_analysis(int(user["id"]), "text", "pasted_text.log", mode, result, {"source_type": "text"})
     return jsonify({"run": _run_summary(run), "result": result})
 
 
 @app.route("/api/analyze/upload", methods=["POST"])
+@login_required
+@workbench_ready_required
 def api_analyze_upload():
+    user = current_user()
     uploaded_file = request.files.get("file")
-    mode = request.form.get("mode", "compare")
+    mode = request.form.get("mode", (current_profile() or {}).get("preferred_analysis_mode", "compare"))
     if uploaded_file is None or uploaded_file.filename == "":
         return jsonify({"error": "No file uploaded."}), 400
 
     filename = secure_filename(uploaded_file.filename)
-    saved_path = UPLOAD_DIR / filename
+    saved_path = _user_upload_dir(int(user["id"])) / filename
     uploaded_file.save(saved_path)
+    _db().execute(
+        "INSERT INTO user_uploads (user_id, original_filename, stored_path, created_at) VALUES (?, ?, ?, ?)",
+        (int(user["id"]), filename, str(saved_path.resolve()), _timestamp()),
+    )
+    _db().commit()
 
     records = load_records_from_file(saved_path)
     result = apply_mode_filter(workbench.predict_records(records), mode)
-    run = _persist_analysis("upload", filename, mode, result, {"saved_path": str(saved_path.resolve())})
+    run = _persist_analysis(int(user["id"]), "upload", filename, mode, result, {"saved_path": str(saved_path.resolve())})
     return jsonify({"filename": filename, "saved_path": str(saved_path.resolve()), "run": _run_summary(run), "result": result})
 
 
 @app.route("/api/runs")
+@login_required
+@workbench_ready_required
 def api_runs():
-    return jsonify({"runs": _list_runs(), "current_run_id": _current_run()["id"] if _current_run() else None})
+    user = current_user()
+    current_run = _current_run(int(user["id"]))
+    return jsonify({"runs": _list_runs(int(user["id"])), "current_run_id": current_run["id"] if current_run else None})
 
 
 @app.route("/api/runs/<run_id>")
+@login_required
+@workbench_ready_required
 def api_run_detail(run_id: str):
-    run = _run_by_id(run_id)
+    user = current_user()
+    run = _run_by_id(int(user["id"]), run_id)
     return jsonify({"run": {**_run_summary(run), "result": run["result"]}})
 
 
 @app.route("/api/live/start", methods=["POST"])
+@login_required
+@workbench_ready_required
 def api_live_start():
+    user = current_user()
     payload = request.get_json(force=True)
     path = str(payload.get("path", "")).strip()
+    system = str(payload.get("system", (current_profile() or {}).get("live_trace_os_preference", "Windows"))).strip() or "Windows"
     if not path:
         return jsonify({"error": "Path is required."}), 400
-    demo_replay.stop(stop_live=False)
+    live_monitor, replay = _user_services(int(user["id"]))
+    replay.stop(stop_live=False)
+    USER_LIVE_CONTEXT[int(user["id"])] = {"system": system, "path": path, "public_user_id": user.get("public_user_id")}
     return jsonify(live_monitor.start(path))
 
 
 @app.route("/api/live/stop", methods=["POST"])
+@login_required
+@workbench_ready_required
 def api_live_stop():
-    demo_replay.stop(stop_live=False)
+    user = current_user()
+    live_monitor, replay = _user_services(int(user["id"]))
+    replay.stop(stop_live=False)
     return jsonify(live_monitor.stop())
 
 
 @app.route("/api/live/status")
+@login_required
+@workbench_ready_required
 def api_live_status():
-    return jsonify({"status": live_monitor.status(), "replay": demo_replay.status()})
+    user = current_user()
+    live_monitor, replay = _user_services(int(user["id"]))
+    return jsonify({"status": live_monitor.status(), "replay": replay.status(), "context": USER_LIVE_CONTEXT.get(int(user["id"]), {})})
 
 
 @app.route("/api/live/save", methods=["POST"])
+@login_required
+@workbench_ready_required
 def api_live_save():
+    user = current_user()
     payload = request.get_json(silent=True) or {}
+    live_monitor, _ = _user_services(int(user["id"]))
     status = live_monitor.status()
     result = status.get("result")
     if not result:
         return jsonify({"error": "No live result is available yet."}), 400
     path = status.get("path") or "live_monitor.log"
     filename = Path(path).name
-    run = _persist_analysis(
-        "live",
-        filename,
-        payload.get("mode", "compare"),
-        result,
-        {"path": path, "saved_from_live": True},
-    )
+    mode = payload.get("mode", (current_profile() or {}).get("preferred_analysis_mode", "compare"))
+    live_context = dict(USER_LIVE_CONTEXT.get(int(user["id"]), {}))
+    live_context.update({"path": path, "saved_from_live": True})
+    run = _persist_analysis(int(user["id"]), "live", filename, mode, result, live_context)
     return jsonify({"run": _run_summary(run), "result": result})
 
 
 @app.route("/api/adaptive/status")
+@login_required
+@workbench_ready_required
 def api_adaptive_status():
     return jsonify(workbench.get_adaptive_status())
 
 
 @app.route("/api/adaptive/toggle", methods=["POST"])
+@login_required
+@workbench_ready_required
 def api_adaptive_toggle():
     enabled = not workbench.get_adaptive_status().get("enabled", True)
     return jsonify(workbench.set_adaptive_thresholding(enabled))
 
 
 @app.route("/api/report/export.json")
+@login_required
+@workbench_ready_required
 def api_report_export_json():
-    run = _selected_run(request.args.get("run_id"))
+    user = current_user()
+    run = _selected_run(int(user["id"]), request.args.get("run_id"))
     payload = json.dumps(run, indent=2)
-    return Response(
-        payload,
-        mimetype="application/json",
-        headers={"Content-Disposition": f"attachment; filename={_run_filename(run, 'json')}"},
-    )
+    return Response(payload, mimetype="application/json", headers={"Content-Disposition": f"attachment; filename={_run_filename(run, 'json')}"})
 
 
 @app.route("/api/report/export.csv")
+@login_required
+@workbench_ready_required
 def api_report_export_csv():
-    run = _selected_run(request.args.get("run_id"))
+    user = current_user()
+    run = _selected_run(int(user["id"]), request.args.get("run_id"))
     payload = workbench.export_report_csv(run.get("result") or _empty_result())
-    return Response(
-        payload,
-        mimetype="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={_run_filename(run, 'csv')}"},
-    )
+    return Response(payload, mimetype="text/csv", headers={"Content-Disposition": f"attachment; filename={_run_filename(run, 'csv')}"})
 
 
 @app.route("/api/report/export.html")
+@login_required
+@workbench_ready_required
 def api_report_export_html():
-    run = _selected_run(request.args.get("run_id"))
-    payload = workbench.export_report_html(
-        run.get("result") or _empty_result(),
-        title=f"Anomaly Report: {run.get('filename', 'Current Report')}",
-    )
-    return Response(
-        payload,
-        mimetype="text/html",
-        headers={"Content-Disposition": f"attachment; filename={_run_filename(run, 'html')}"},
-    )
+    user = current_user()
+    run = _selected_run(int(user["id"]), request.args.get("run_id"))
+    payload = workbench.export_report_html(run.get("result") or _empty_result(), title=f"Anomaly Report: {run.get('filename', 'Current Report')}")
+    return Response(payload, mimetype="text/html", headers={"Content-Disposition": f"attachment; filename={_run_filename(run, 'html')}"})
 
 
 if __name__ == "__main__":
-    ensure_bootstrap_started()
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(
+        host="127.0.0.1",
+        port=int(os.getenv("PORT", "5000")),
+        debug=os.getenv("FLASK_DEBUG", "0") == "1",
+    )

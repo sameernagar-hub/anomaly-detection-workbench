@@ -4,10 +4,10 @@
   <section class="hero-card">
     <div class="hero-copy">
       <div class="eyebrow">FAQ / Docs Service</div>
-      <h1>Project notes for anomaly detection workflow, metrics, and common questions.</h1>
+      <h1>Service guidance for access, personalization, anomaly review, and operational workflows.</h1>
       <p>
-        Use this page when you need a quick explanation of the anomaly detection workflow, model outputs,
-        drift signals, evaluation results, or common troubleshooting steps.
+        Use this page for platform guidance across account access, profile personalization, live tracing,
+        run review, exports, evaluation metrics, and common support questions.
       </p>
       <div class="control-row wrap">
         <a class="primary" href="{{ url_for('overview') }}">Back to Overview</a>
@@ -20,24 +20,24 @@
       <div class="panel-kicker">What this page covers</div>
       <div class="hero-status-grid">
         <div class="status-tile">
-          <span>Getting started</span>
-          <strong>Setup</strong>
-          <small>How to launch the app and move through the main workflow.</small>
+          <span>Access service</span>
+          <strong>Identity</strong>
+          <small>Sign-in, remembered access, human verification, and account recovery.</small>
         </div>
         <div class="status-tile">
-          <span>Metrics</span>
-          <strong>Definitions</strong>
-          <small>Plain-English explanations for key model and evaluation outputs.</small>
+          <span>Profile service</span>
+          <strong>Personalization</strong>
+          <small>Avatar, system preferences, user ID, and workbench defaults.</small>
         </div>
         <div class="status-tile">
           <span>Live monitoring</span>
-          <strong>Behavior</strong>
-          <small>How replay, file-tail monitoring, and archived snapshots work.</small>
+          <strong>Context</strong>
+          <small>How live tracing system labels and archived snapshots work.</small>
         </div>
         <div class="status-tile">
-          <span>Troubleshooting</span>
-          <strong>Support</strong>
-          <small>Common questions and common causes of confusing results.</small>
+          <span>Review and support</span>
+          <strong>Guidance</strong>
+          <small>Metric definitions, workflow help, and troubleshooting checks.</small>
         </div>
       </div>
     </div>
@@ -48,26 +48,26 @@
       <section class="glass-card section-card">
         <div class="section-head">
           <div>
-            <div class="eyebrow">Getting Started</div>
-            <h2>How to use the app</h2>
+            <div class="eyebrow">Access Workflow</div>
+            <h2>How the access service works</h2>
           </div>
         </div>
         <div class="docs-stack">
           <article class="report-card">
-            <strong>1. Overview</strong>
-            <p>Check whether the models are ready, review the latest anomaly detection run, and confirm evaluation and live-monitor status.</p>
+            <strong>1. Account provisioning</strong>
+            <p>Create an account with required identity details, then optionally answer workbench-specific questions so the service can personalize your profile and defaults.</p>
           </article>
           <article class="report-card">
-            <strong>2. Analysis</strong>
-            <p>Run anomaly detection on pasted text, an uploaded file, or a prepared sample input.</p>
+            <strong>2. Credential entry</strong>
+            <p>Use your email and password to initiate access to the workspace.</p>
           </article>
           <article class="report-card">
-            <strong>3. Run Details</strong>
-            <p>Review the saved chart, evidence table, anomaly scores, drift signal, metadata, and export options.</p>
+            <strong>3. Human verification</strong>
+            <p>Complete the scribble code and emoji match before a secured session opens.</p>
           </article>
           <article class="report-card">
-            <strong>4. Live Monitoring</strong>
-            <p>Use this page for continuously updating logs or replay streams. Archive a snapshot if you want to preserve that state as a normal run.</p>
+            <strong>4. Remembered access</strong>
+            <p>If you opt into Remember this device, the service can keep a trusted session active longer on that device.</p>
           </article>
         </div>
       </section>
@@ -75,17 +75,33 @@
       <section class="glass-card section-card">
         <div class="section-head">
           <div>
-            <div class="eyebrow">App Services</div>
-            <h2>What each window does</h2>
+            <div class="eyebrow">Profile Service</div>
+            <h2>Personalization surfaces</h2>
           </div>
         </div>
         <div class="docs-stack">
-          <article class="report-card"><strong>Overview</strong><p>Use this page to check project status and jump into analysis, live monitoring, evaluation, or archived results.</p></article>
-          <article class="report-card"><strong>Analysis</strong><p>Runs anomaly detection on text, files, and prepared sample scenarios.</p></article>
-          <article class="report-card"><strong>Live Monitoring</strong><p>Monitors a changing file or replay stream without overwriting saved run details.</p></article>
-          <article class="report-card"><strong>Evaluation</strong><p>Shows benchmark metrics for the baseline sequence model and the argument-aware model, including proxy cross-host comparison.</p></article>
-          <article class="report-card"><strong>Run Archive</strong><p>Stores saved runs from the current session, including bootstrap runs, analysis runs, and archived live snapshots.</p></article>
-          <article class="report-card"><strong>Run Details</strong><p>Shows one saved anomaly detection run with a frozen timeline, table, metadata, and export actions.</p></article>
+          <article class="report-card"><strong>Public user ID</strong><p>Each account receives a unique service identifier that can follow run metadata, live tracing context, and future ownership records.</p></article>
+          <article class="report-card"><strong>Avatar</strong><p>You can upload a profile image or fall back to the generated initials badge shown in the top-right workspace header.</p></article>
+          <article class="report-card"><strong>Primary system</strong><p>Your profile can store whether you mainly work on Windows, Linux, or macOS.</p></article>
+          <article class="report-card"><strong>Live tracing system preference</strong><p>This default helps the Live Monitoring service prefill the operating-system context for new live sessions.</p></article>
+          <article class="report-card"><strong>Preferred analysis mode</strong><p>Controls the default result mode used when you launch a new analysis.</p></article>
+        </div>
+      </section>
+
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Operational Workflow</div>
+            <h2>How the service areas fit together</h2>
+          </div>
+        </div>
+        <div class="docs-stack">
+          <article class="report-card"><strong>Overview</strong><p>Use this page to confirm model readiness, review the latest saved result, and see the current account-aware system status.</p></article>
+          <article class="report-card"><strong>Analysis Service</strong><p>Run anomaly detection on pasted text, uploaded files, or prepared scenarios. New runs inherit your profile-aware defaults where applicable.</p></article>
+          <article class="report-card"><strong>Live Monitoring Service</strong><p>Monitor an updating file or replay stream while labeling the traced system as Windows, Linux, or macOS so archived snapshots preserve that context.</p></article>
+          <article class="report-card"><strong>Run Archive</strong><p>Saved runs are private to the active account and can carry profile-linked metadata such as public user ID and live-trace context.</p></article>
+          <article class="report-card"><strong>Run Details</strong><p>Each saved run opens with a frozen timeline, evidence table, metadata panel, and export actions for later review.</p></article>
+          <article class="report-card"><strong>Evaluation Service</strong><p>Use this area for benchmark comparison, not for inspecting one specific operational run.</p></article>
         </div>
       </section>
 
@@ -116,10 +132,11 @@
           </div>
         </div>
         <div class="docs-stack">
-          <article class="report-card"><strong>Why does the live graph keep changing?</strong><p>The live page is designed for updating inputs. Archive a snapshot when you want a stable result page.</p></article>
-          <article class="report-card"><strong>Why is the run archive empty after restart?</strong><p>The current archive is stored in memory for the active Flask session only.</p></article>
-          <article class="report-card"><strong>What is the difference between a run and a snapshot?</strong><p>A run is any saved analysis result. A snapshot is a live-monitor state that has been archived as a run.</p></article>
-          <article class="report-card"><strong>When should I use Evaluation?</strong><p>Use it when you want benchmark comparison results, not when you need to inspect one specific anomaly detection run.</p></article>
+          <article class="report-card"><strong>Why am I asked to complete a human check?</strong><p>The access service uses a local human-verification sequence before opening a secured workspace session.</p></article>
+          <article class="report-card"><strong>What does Remember this device do?</strong><p>If you opt in, the platform can keep a trusted session active longer so you do not need to repeat the full sign-in flow every visit.</p></article>
+          <article class="report-card"><strong>What is the public user ID for?</strong><p>It provides a stable account identifier that can follow saved run metadata and live service context.</p></article>
+          <article class="report-card"><strong>Why does Live Monitoring ask for a system label?</strong><p>The Windows, Linux, or macOS label preserves operating-system context for live traces and archived snapshots.</p></article>
+          <article class="report-card"><strong>Can I change my avatar later?</strong><p>Yes. The Profile service supports avatar upload, replacement, or a return to initials-based presentation.</p></article>
         </div>
       </section>
 
@@ -131,10 +148,11 @@
           </div>
         </div>
         <div class="docs-stack">
+          <article class="report-card"><strong>Access challenge keeps failing</strong><p>Refresh the challenge if the scribble card is unclear or if the active verification window has expired.</p></article>
+          <article class="report-card"><strong>Avatar is not appearing</strong><p>Use a supported image type such as PNG, JPG, WEBP, or GIF and keep the file within the configured size limit.</p></article>
           <article class="report-card"><strong>No result appears after analysis</strong><p>Check that models have finished bootstrapping and that the input contains enough records to build windows.</p></article>
-          <article class="report-card"><strong>Live monitor shows no change</strong><p>Make sure the selected file path exists and is actively receiving new lines.</p></article>
+          <article class="report-card"><strong>Live monitor shows no change</strong><p>Make sure the selected file path exists, the correct system label is selected, and the file is actively receiving new lines.</p></article>
           <article class="report-card"><strong>Evaluation is still pending</strong><p>The benchmark worker may still be running in the background. Refresh the page after a short wait.</p></article>
-          <article class="report-card"><strong>Why are drift or adaptive values not changing?</strong><p>Those signals need enough windows to compare recent behavior against earlier behavior in the same run.</p></article>
         </div>
       </section>
     </aside>

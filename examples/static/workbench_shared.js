@@ -41,7 +41,7 @@
   }
 
   function initTheme() {
-    const theme = localStorage.getItem("adw-theme") || "campus";
+    const theme = bootstrap.preferences?.theme || localStorage.getItem("adw-theme") || document.body.dataset.theme || "campus";
     setTheme(theme);
     const select = document.getElementById("themeSelect");
     if (select) {
@@ -152,7 +152,20 @@
 
   async function fetchJSON(url, options) {
     const response = await fetch(url, options);
-    const payload = await response.json();
+    let payload = {};
+    try {
+      payload = await response.json();
+    } catch (error) {
+      payload = {};
+    }
+    if (response.status === 401) {
+      window.location.href = "/auth/login";
+      throw new Error("Authentication required.");
+    }
+    if (response.status === 503 && payload?.redirect) {
+      window.location.href = payload.redirect;
+      throw new Error(payload.error || "The workbench is still preparing your environment.");
+    }
     if (!response.ok) {
       throw new Error(payload.error || payload.message || `Request failed for ${url}`);
     }

@@ -62,6 +62,9 @@
   }
 
   els.logText.value = bootstrap.sample_text || "";
+  if (bootstrap.preferences?.analysis_mode) {
+    els.analysisMode.value = bootstrap.preferences.analysis_mode;
+  }
   ui.renderScenarioGrid(els.scenarioGrid, bootstrap.sample_catalog || [], {
     loadSample,
     analyzeSample,

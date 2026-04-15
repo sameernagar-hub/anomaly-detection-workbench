@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Verify Human | CSUF Anomaly Detection Workbench{% endblock %}
+{% block content %}
+  <section class="auth-stage">
+    <article class="hero-card auth-hero-card auth-wide-card">
+      <div class="hero-copy">
+        <div class="eyebrow">Verification Service</div>
+        <h1>Human validation protects access to your secured workspace session.</h1>
+        <p>
+          Complete the short verification sequence below to continue into your personal workbench environment.
+          {% if remember_me %}Because remembered access was requested, a successful verification can keep this trusted device signed in longer.{% endif %}
+        </p>
+        <div class="hero-badges">
+          <span>Scribble code validation</span>
+          <span>Emoji confirmation</span>
+          <span>{{ seconds_left }}s active window</span>
+        </div>
+      </div>
+
+      <div class="auth-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Verification Panel</div>
+            <h2>Complete the access challenge</h2>
+          </div>
+        </div>
+        <form class="auth-form" method="post" novalidate data-human-verify>
+          <div class="verify-card">
+            <div class="field-label">Scribble code <button class="info-dot" type="button" data-tooltip="Type the distorted code shown on the panel. This acts as the first human-verification step before the session opens." aria-label="Explain scribble code">?</button></div>
+            <canvas id="scribbleCanvas" class="scribble-canvas" width="420" height="140" aria-label="Scribble code challenge"></canvas>
+            <input type="text" id="scribble_code" name="scribble_code" placeholder="Type the code you see" autocomplete="off" required>
+          </div>
+
+          <div class="verify-card">
+            <div class="field-label">Emoji match <button class="info-dot" type="button" data-tooltip="Select the emoji that matches the prompt shown here. This confirms the second step of the human-verification service." aria-label="Explain emoji match">?</button></div>
+            <div class="muted">{{ human_payload.emoji.prompt }}</div>
+            <input type="hidden" name="emoji_choice" id="emoji_choice" required>
+            <div class="emoji-grid" id="emojiGrid">
+              {% for option in human_payload.emoji.options %}
+                <button class="emoji-option" type="button" data-emoji-choice="{{ option }}">{{ option }}</button>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="auth-actions">
+            <button class="primary" type="submit">Open workspace</button>
+            <button class="ghost" type="submit" name="action" value="refresh">Refresh challenge</button>
+          </div>
+          <div class="status-blade subtle">Need a fresh verification set? Use Refresh to generate a new scribble card and emoji prompt.</div>
+        </form>
+      </div>
+    </article>
+  </section>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='auth.js') }}"></script>
+{% endblock %}

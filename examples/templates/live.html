@@ -16,6 +16,12 @@
 
         <label class="field-label" for="livePath">Monitored file path <button class="info-dot" type="button" data-tooltip="Point this service at a local log file that is being appended over time." aria-label="Explain monitored file path">?</button></label>
         <input type="text" id="livePath" placeholder="C:\path\to\trace.log">
+        <label class="field-label" for="liveSystem">Live trace system <button class="info-dot" type="button" data-tooltip="Marks whether this live monitoring session is tracing a Windows, Linux, or macOS source so archived snapshots preserve operating-system context." aria-label="Explain live trace system">?</button></label>
+        <select id="liveSystem">
+          <option value="Windows">Windows</option>
+          <option value="Linux">Linux</option>
+          <option value="macOS">macOS</option>
+        </select>
         <div class="control-row wrap">
           <button class="primary" id="startLiveBtn" data-tooltip="Starts monitoring the file path shown above for new lines." aria-label="Explain start monitor">Start monitor</button>
           <button class="ghost" id="stopLiveBtn" data-tooltip="Stops the live-monitor worker for the current file path." aria-label="Explain stop monitor">Stop monitor</button>

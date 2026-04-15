@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Profile | CSUF Anomaly Detection Workbench{% endblock %}
+{% block content %}
+  <section class="glass-card section-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Profile Service</div>
+        <h1>Manage your workspace identity, systems profile, and presentation settings.</h1>
+      </div>
+    </div>
+    <p class="section-copy">
+      Use this service panel to refine account identity, update system preferences, control avatar presentation,
+      and keep your personalized workbench aligned with how you operate.
+    </p>
+    <form class="auth-form profile-form" method="post" enctype="multipart/form-data" novalidate>
+      <div class="profile-hero">
+        <div class="profile-avatar-stack">
+          {% if avatar_url %}
+            <img class="profile-avatar-preview" src="{{ avatar_url }}" alt="Current avatar">
+          {% else %}
+            <div class="profile-avatar-fallback">{{ (form_data.display_name or form_data.first_name or 'U')[0]|upper }}</div>
+          {% endif %}
+          <label class="field-label" for="avatar">Avatar image <button class="info-dot" type="button" data-tooltip="Upload an image to replace the initials avatar shown in the top-right workspace header." aria-label="Explain avatar upload">?</button></label>
+          <input type="file" id="avatar" name="avatar" accept=".png,.jpg,.jpeg,.webp,.gif">
+          <label class="remember-shell">
+            <input type="checkbox" name="remove_avatar" value="1">
+            <span>Revert to initials avatar <button class="info-dot" type="button" data-tooltip="Clears the uploaded avatar so the service returns to the generated initials badge." aria-label="Explain avatar removal">?</button></span>
+          </label>
+          {% if form_errors.avatar %}<div class="field-error">{{ form_errors.avatar }}</div>{% endif %}
+        </div>
+        <div class="profile-id-card">
+          <span class="field-label">Public user ID <button class="info-dot" type="button" data-tooltip="A unique service identifier attached to your account, run metadata, and live-tracing context." aria-label="Explain public user ID">?</button></span>
+          <strong>{{ form_data.public_user_id }}</strong>
+          <small class="muted">This identifier travels with saved run metadata and live service context.</small>
+        </div>
+      </div>
+
+      <div class="auth-grid">
+        <div>
+          <label class="field-label" for="email">Email <button class="info-dot" type="button" data-tooltip="Your primary account identifier for sign-in and password recovery. It is shown here for reference only." aria-label="Explain profile email">?</button></label>
+          <input type="email" id="email" value="{{ form_data.email }}" disabled>
+        </div>
+        <div>
+          <label class="field-label" for="first_name">First name <button class="info-dot" type="button" data-tooltip="Used for account identity and personalized greeting surfaces inside the service." aria-label="Explain first name">?</button></label>
+          <input type="text" id="first_name" name="first_name" value="{{ form_data.first_name }}" required>
+          {% if form_errors.first_name %}<div class="field-error">{{ form_errors.first_name }}</div>{% endif %}
+        </div>
+        <div>
+          <label class="field-label" for="last_name">Last name <button class="info-dot" type="button" data-tooltip="Used for full identity context and future ownership reporting across the workspace." aria-label="Explain last name">?</button></label>
+          <input type="text" id="last_name" name="last_name" value="{{ form_data.last_name }}" required>
+          {% if form_errors.last_name %}<div class="field-error">{{ form_errors.last_name }}</div>{% endif %}
+        </div>
+        <div>
+          <label class="field-label" for="display_name">Display name <button class="info-dot" type="button" data-tooltip="The friendly name shown in the service header, profile areas, and selected personalized prompts." aria-label="Explain display name">?</button></label>
+          <input type="text" id="display_name" name="display_name" value="{{ form_data.display_name }}" required>
+          {% if form_errors.display_name %}<div class="field-error">{{ form_errors.display_name }}</div>{% endif %}
+        </div>
+        <div>
+          <label class="field-label" for="role">Role <button class="info-dot" type="button" data-tooltip="Optional operating role used to shape profile context and future service suggestions." aria-label="Explain role">?</button></label>
+          <input type="text" id="role" name="role" value="{{ form_data.role }}">
+        </div>
+        <div>
+          <label class="field-label" for="organization">Organization <button class="info-dot" type="button" data-tooltip="Optional team or organization field used to enrich your workspace profile." aria-label="Explain organization">?</button></label>
+          <input type="text" id="organization" name="organization" value="{{ form_data.organization }}">
+        </div>
+        <div>
+          <label class="field-label" for="monitoring_focus">Monitoring focus <button class="info-dot" type="button" data-tooltip="The telemetry or operational area you care about most, used for profile context and personalization." aria-label="Explain monitoring focus">?</button></label>
+          <input type="text" id="monitoring_focus" name="monitoring_focus" value="{{ form_data.monitoring_focus }}">
+        </div>
+        <div>
+          <label class="field-label" for="primary_os">Primary system <button class="info-dot" type="button" data-tooltip="The operating system family most central to your normal workflow." aria-label="Explain primary system">?</button></label>
+          <select id="primary_os" name="primary_os">
+            <option value="Windows" {% if form_data.primary_os == 'Windows' %}selected{% endif %}>Windows</option>
+            <option value="Linux" {% if form_data.primary_os == 'Linux' %}selected{% endif %}>Linux</option>
+            <option value="macOS" {% if form_data.primary_os == 'macOS' %}selected{% endif %}>macOS</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="host_environment">Host environment <button class="info-dot" type="button" data-tooltip="Describes the environment you usually investigate so the service can frame your profile more accurately." aria-label="Explain host environment">?</button></label>
+          <select id="host_environment" name="host_environment">
+            <option value="" {% if not form_data.host_environment %}selected{% endif %}>Select one</option>
+            <option value="Personal workstation" {% if form_data.host_environment == 'Personal workstation' %}selected{% endif %}>Personal workstation</option>
+            <option value="Enterprise endpoint" {% if form_data.host_environment == 'Enterprise endpoint' %}selected{% endif %}>Enterprise endpoint</option>
+            <option value="Server fleet" {% if form_data.host_environment == 'Server fleet' %}selected{% endif %}>Server fleet</option>
+            <option value="Hybrid lab" {% if form_data.host_environment == 'Hybrid lab' %}selected{% endif %}>Hybrid lab</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="log_source_preference">Log source preference <button class="info-dot" type="button" data-tooltip="Stores the telemetry category you most often review so future defaults can follow your preferred service pattern." aria-label="Explain log source preference">?</button></label>
+          <select id="log_source_preference" name="log_source_preference">
+            <option value="" {% if not form_data.log_source_preference %}selected{% endif %}>Select one</option>
+            <option value="Application logs" {% if form_data.log_source_preference == 'Application logs' %}selected{% endif %}>Application logs</option>
+            <option value="Network logs" {% if form_data.log_source_preference == 'Network logs' %}selected{% endif %}>Network logs</option>
+            <option value="System logs" {% if form_data.log_source_preference == 'System logs' %}selected{% endif %}>System logs</option>
+            <option value="Mixed telemetry" {% if form_data.log_source_preference == 'Mixed telemetry' %}selected{% endif %}>Mixed telemetry</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="live_trace_os_preference">Live tracing system <button class="info-dot" type="button" data-tooltip="Controls the default operating-system context preloaded into the Live Monitoring service." aria-label="Explain live tracing system">?</button></label>
+          <select id="live_trace_os_preference" name="live_trace_os_preference">
+            <option value="Windows" {% if form_data.live_trace_os_preference == 'Windows' %}selected{% endif %}>Windows</option>
+            <option value="Linux" {% if form_data.live_trace_os_preference == 'Linux' %}selected{% endif %}>Linux</option>
+            <option value="macOS" {% if form_data.live_trace_os_preference == 'macOS' %}selected{% endif %}>macOS</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="preferred_theme">Preferred theme <button class="info-dot" type="button" data-tooltip="Sets the visual theme the service should apply when your workspace opens." aria-label="Explain preferred theme">?</button></label>
+          <select id="preferred_theme" name="preferred_theme">
+            <option value="campus" {% if form_data.preferred_theme == 'campus' %}selected{% endif %}>Campus</option>
+            <option value="midnight" {% if form_data.preferred_theme == 'midnight' %}selected{% endif %}>Midnight</option>
+            <option value="signal" {% if form_data.preferred_theme == 'signal' %}selected{% endif %}>Signal</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="preferred_analysis_mode">Preferred analysis mode <button class="info-dot" type="button" data-tooltip="Sets the default result presentation used when you launch analyses from the workbench." aria-label="Explain preferred analysis mode">?</button></label>
+          <select id="preferred_analysis_mode" name="preferred_analysis_mode">
+            <option value="compare" {% if form_data.preferred_analysis_mode == 'compare' %}selected{% endif %}>Dual Command View</option>
+            <option value="deeplog" {% if form_data.preferred_analysis_mode == 'deeplog' %}selected{% endif %}>Baseline Sentinel only</option>
+            <option value="report" {% if form_data.preferred_analysis_mode == 'report' %}selected{% endif %}>Apex Insight only</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="notification_preference">Notifications <button class="info-dot" type="button" data-tooltip="Stores the communication style you prefer for future reminders or digest-oriented service updates." aria-label="Explain notifications">?</button></label>
+          <select id="notification_preference" name="notification_preference">
+            <option value="important-only" {% if form_data.notification_preference == 'important-only' %}selected{% endif %}>Important only</option>
+            <option value="daily-digest" {% if form_data.notification_preference == 'daily-digest' %}selected{% endif %}>Daily digest</option>
+            <option value="hands-on" {% if form_data.notification_preference == 'hands-on' %}selected{% endif %}>Hands-on / active</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="greeting_style">Greeting style <button class="info-dot" type="button" data-tooltip="Controls the tone used by selected personalized prompts and greeting surfaces inside the service." aria-label="Explain greeting style">?</button></label>
+          <select id="greeting_style" name="greeting_style">
+            <option value="warm" {% if form_data.greeting_style == 'warm' %}selected{% endif %}>Warm</option>
+            <option value="confident" {% if form_data.greeting_style == 'confident' %}selected{% endif %}>Confident</option>
+            <option value="concise" {% if form_data.greeting_style == 'concise' %}selected{% endif %}>Concise</option>
+          </select>
+        </div>
+      </div>
+      <div class="auth-actions">
+        <button class="primary" type="submit">Save profile service settings</button>
+      </div>
+    </form>
+  </section>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='auth.js') }}"></script>
+{% endblock %}

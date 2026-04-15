@@ -1,9 +1,12 @@
-numpy==1.26.4
-torch-train==0.0.3
-torch==2.10.0
+# Core ML / data stack
 argformat==0.0.3
-scikit-learn==1.8.0
-tqdm==4.67.1
+numpy==1.26.4
 pandas==3.0.2
+scikit-learn==1.8.0
+torch==2.10.0
+torch-train==0.0.3
+tqdm==4.67.1
+
+# Web application stack
 Flask==3.1.0
 Werkzeug==3.1.3

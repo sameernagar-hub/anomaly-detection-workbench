@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Create Account | CSUF Anomaly Detection Workbench{% endblock %}
+{% block content %}
+  <section class="auth-stage">
+    <article class="hero-card auth-hero-card auth-wide-card">
+      <div class="hero-copy">
+        <div class="eyebrow">Provisioning Service</div>
+        <h1>Provision a workspace tuned to your systems, tracing habits, and review style.</h1>
+        <p>
+          The onboarding service captures the essential identity fields first, then asks optional workbench questions
+          so the platform can personalize themes, defaults, live-tracing context, and profile presentation.
+        </p>
+        <div class="hero-badges">
+          <span>Required identity fields</span>
+          <span>System-aware preferences</span>
+          <span>Avatar-ready profile</span>
+        </div>
+      </div>
+
+      <div class="auth-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Account Provisioning</div>
+            <h2>Create your secure workspace identity</h2>
+          </div>
+        </div>
+        <form class="auth-form" method="post" novalidate data-auth-signup>
+          <div class="section-copy auth-subcopy">Required identity details</div>
+          <div class="auth-grid">
+            <div>
+              <label class="field-label" for="first_name">First name <button class="info-dot" type="button" data-tooltip="Required for profile identity and personalized service greetings throughout the workbench." aria-label="Explain first name">?</button></label>
+              <input type="text" id="first_name" name="first_name" value="{{ form_data.first_name }}" required>
+              {% if form_errors.first_name %}<div class="field-error">{{ form_errors.first_name }}</div>{% endif %}
+            </div>
+            <div>
+              <label class="field-label" for="last_name">Last name <button class="info-dot" type="button" data-tooltip="Required for account identity, profile records, and ownership context in future service workflows." aria-label="Explain last name">?</button></label>
+              <input type="text" id="last_name" name="last_name" value="{{ form_data.last_name }}" required>
+              {% if form_errors.last_name %}<div class="field-error">{{ form_errors.last_name }}</div>{% endif %}
+            </div>
+            <div>
+              <label class="field-label" for="display_name">Display name <button class="info-dot" type="button" data-tooltip="Shown in greetings, service headers, and profile surfaces. It can be more informal than your full name." aria-label="Explain display name">?</button></label>
+              <input type="text" id="display_name" name="display_name" value="{{ form_data.display_name }}" required>
+              {% if form_errors.display_name %}<div class="field-error">{{ form_errors.display_name }}</div>{% endif %}
+            </div>
+            <div>
+              <label class="field-label" for="email">Email <button class="info-dot" type="button" data-tooltip="Used as the account sign-in identifier and password recovery channel for this prototype." aria-label="Explain email">?</button></label>
+              <input type="email" id="email" name="email" value="{{ form_data.email }}" autocomplete="email" required>
+              {% if form_errors.email %}<div class="field-error">{{ form_errors.email }}</div>{% endif %}
+            </div>
+          </div>
+
+          <div class="section-copy auth-subcopy">Optional workbench preferences</div>
+          <div class="auth-grid">
+            <div>
+              <label class="field-label" for="role">Role <button class="info-dot" type="button" data-tooltip="Helps the service tailor profile copy and future workflow defaults for how you operate." aria-label="Explain role">?</button></label>
+              <input type="text" id="role" name="role" value="{{ form_data.role }}" placeholder="Security analyst, SRE, researcher...">
+            </div>
+            <div>
+              <label class="field-label" for="organization">Organization <button class="info-dot" type="button" data-tooltip="Optional team or organization label used to contextualize your profile and service workspace." aria-label="Explain organization">?</button></label>
+              <input type="text" id="organization" name="organization" value="{{ form_data.organization }}" placeholder="Team or company">
+            </div>
+            <div>
+              <label class="field-label" for="monitoring_focus">Monitoring focus <button class="info-dot" type="button" data-tooltip="Describes the kind of telemetry or review pattern you care about most so the workspace can feel more relevant." aria-label="Explain monitoring focus">?</button></label>
+              <input type="text" id="monitoring_focus" name="monitoring_focus" value="{{ form_data.monitoring_focus }}" placeholder="System logs, network events, mixed telemetry...">
+            </div>
+            <div>
+              <label class="field-label" for="primary_os">Primary system <button class="info-dot" type="button" data-tooltip="The system family you work on most often. This can be echoed in profile and service defaults." aria-label="Explain primary system">?</button></label>
+              <select id="primary_os" name="primary_os">
+                <option value="Windows" {% if form_data.primary_os == 'Windows' %}selected{% endif %}>Windows</option>
+                <option value="Linux" {% if form_data.primary_os == 'Linux' %}selected{% endif %}>Linux</option>
+                <option value="macOS" {% if form_data.primary_os == 'macOS' %}selected{% endif %}>macOS</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label" for="host_environment">Host environment <button class="info-dot" type="button" data-tooltip="Captures the type of environment you usually investigate so the workbench can present a more appropriate operational profile." aria-label="Explain host environment">?</button></label>
+              <select id="host_environment" name="host_environment">
+                <option value="" {% if not form_data.host_environment %}selected{% endif %}>Select one</option>
+                <option value="Personal workstation" {% if form_data.host_environment == 'Personal workstation' %}selected{% endif %}>Personal workstation</option>
+                <option value="Enterprise endpoint" {% if form_data.host_environment == 'Enterprise endpoint' %}selected{% endif %}>Enterprise endpoint</option>
+                <option value="Server fleet" {% if form_data.host_environment == 'Server fleet' %}selected{% endif %}>Server fleet</option>
+                <option value="Hybrid lab" {% if form_data.host_environment == 'Hybrid lab' %}selected{% endif %}>Hybrid lab</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label" for="log_source_preference">Log source preference <button class="info-dot" type="button" data-tooltip="Stores the telemetry category you review most often so future service presets can follow your normal workflow." aria-label="Explain log source preference">?</button></label>
+              <select id="log_source_preference" name="log_source_preference">
+                <option value="" {% if not form_data.log_source_preference %}selected{% endif %}>Select one</option>
+                <option value="Application logs" {% if form_data.log_source_preference == 'Application logs' %}selected{% endif %}>Application logs</option>
+                <option value="Network logs" {% if form_data.log_source_preference == 'Network logs' %}selected{% endif %}>Network logs</option>
+                <option value="System logs" {% if form_data.log_source_preference == 'System logs' %}selected{% endif %}>System logs</option>
+                <option value="Mixed telemetry" {% if form_data.log_source_preference == 'Mixed telemetry' %}selected{% endif %}>Mixed telemetry</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label" for="live_trace_os_preference">Live tracing system <button class="info-dot" type="button" data-tooltip="Sets the default system label for the Live Monitoring service so archived traces preserve operating-system context." aria-label="Explain live tracing system">?</button></label>
+              <select id="live_trace_os_preference" name="live_trace_os_preference">
+                <option value="Windows" {% if form_data.live_trace_os_preference == 'Windows' %}selected{% endif %}>Windows</option>
+                <option value="Linux" {% if form_data.live_trace_os_preference == 'Linux' %}selected{% endif %}>Linux</option>
+                <option value="macOS" {% if form_data.live_trace_os_preference == 'macOS' %}selected{% endif %}>macOS</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label" for="preferred_theme">Preferred theme <button class="info-dot" type="button" data-tooltip="Applies your default visual theme when the workspace loads and can still be changed later from the header or profile." aria-label="Explain preferred theme">?</button></label>
+              <select id="preferred_theme" name="preferred_theme">
+                <option value="campus" {% if form_data.preferred_theme == 'campus' %}selected{% endif %}>Campus</option>
+                <option value="midnight" {% if form_data.preferred_theme == 'midnight' %}selected{% endif %}>Midnight</option>
+                <option value="signal" {% if form_data.preferred_theme == 'signal' %}selected{% endif %}>Signal</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label" for="preferred_analysis_mode">Preferred analysis mode <button class="info-dot" type="button" data-tooltip="Sets the default result mode used when you launch new analyses from the studio." aria-label="Explain preferred analysis mode">?</button></label>
+              <select id="preferred_analysis_mode" name="preferred_analysis_mode">
+                <option value="compare" {% if form_data.preferred_analysis_mode == 'compare' %}selected{% endif %}>Dual Command View</option>
+                <option value="deeplog" {% if form_data.preferred_analysis_mode == 'deeplog' %}selected{% endif %}>Baseline Sentinel only</option>
+                <option value="report" {% if form_data.preferred_analysis_mode == 'report' %}selected{% endif %}>Apex Insight only</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label" for="notification_preference">Notifications <button class="info-dot" type="button" data-tooltip="Stores the communication style you prefer for future service reminders or digest-style updates." aria-label="Explain notifications">?</button></label>
+              <select id="notification_preference" name="notification_preference">
+                <option value="important-only" {% if form_data.notification_preference == 'important-only' %}selected{% endif %}>Important only</option>
+                <option value="daily-digest" {% if form_data.notification_preference == 'daily-digest' %}selected{% endif %}>Daily digest</option>
+                <option value="hands-on" {% if form_data.notification_preference == 'hands-on' %}selected{% endif %}>Hands-on / active</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label" for="greeting_style">Greeting style <button class="info-dot" type="button" data-tooltip="Controls the tone of selected profile and service greeting surfaces inside the workbench." aria-label="Explain greeting style">?</button></label>
+              <select id="greeting_style" name="greeting_style">
+                <option value="warm" {% if form_data.greeting_style == 'warm' %}selected{% endif %}>Warm</option>
+                <option value="confident" {% if form_data.greeting_style == 'confident' %}selected{% endif %}>Confident</option>
+                <option value="concise" {% if form_data.greeting_style == 'concise' %}selected{% endif %}>Concise</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="auth-grid auth-password-grid">
+            <div>
+              <label class="field-label" for="password">Password <button class="info-dot" type="button" data-tooltip="Create a strong password that satisfies the built-in policy checks shown by the strength meter." aria-label="Explain password creation">?</button></label>
+              <div class="password-shell">
+                <input type="password" id="password" name="password" data-password-input data-password-strength autocomplete="new-password" required>
+                <button class="ghost compact password-toggle" type="button" data-password-toggle data-target="password">Show</button>
+              </div>
+              <div class="strength-meter">
+                <div class="strength-bar"><span id="passwordStrengthBar" style="width: {{ (password_strength.score or 0) * 16 }}%;"></span></div>
+                <strong id="passwordStrengthLabel">{{ password_strength.label }}</strong>
+              </div>
+              {% if form_errors.password %}<div class="field-error">{{ form_errors.password }}</div>{% endif %}
+            </div>
+            <div>
+              <label class="field-label" for="confirm_password">Confirm password <button class="info-dot" type="button" data-tooltip="Repeat the password to confirm the new account was provisioned with the intended credential." aria-label="Explain confirm password">?</button></label>
+              <div class="password-shell">
+                <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password" required>
+                <button class="ghost compact password-toggle" type="button" data-password-toggle data-target="confirm_password">Show</button>
+              </div>
+              {% if form_errors.confirm_password %}<div class="field-error">{{ form_errors.confirm_password }}</div>{% endif %}
+            </div>
+          </div>
+
+          <div class="auth-actions">
+            <button class="primary" type="submit">Provision account</button>
+            <a class="ghost" href="{{ url_for('auth.login') }}">I already have an account</a>
+          </div>
+        </form>
+      </div>
+    </article>
+  </section>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='auth.js') }}"></script>
+{% endblock %}

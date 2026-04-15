@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Preparing Workspace | CSUF Anomaly Detection Workbench{% endblock %}
+{% block content %}
+  <section class="hero-card buffer-stage">
+    <div class="hero-copy">
+      <div class="eyebrow">Workspace Buffer</div>
+      <h1>Preparing your secure anomaly detection workbench.</h1>
+      <p>
+        Please wait while we finish loading detection services, personalize your environment, and prepare your
+        workspace for analysis.
+      </p>
+
+      <div class="buffer-pill-row">
+        <span class="hero-badges"><span>Authenticated session active</span></span>
+        <span class="hero-badges"><span>Private workspace setup</span></span>
+        <span class="hero-badges"><span>Model warmup in progress</span></span>
+      </div>
+
+      <div class="buffer-status-card">
+        <div class="eyebrow">Current step</div>
+        <strong id="bufferRotatingMessage">{{ buffer_messages[0] }}</strong>
+        <p id="bufferDetailMessage">{{ bootstrap_state.message }}</p>
+      </div>
+
+      <div class="buffer-progress-shell" aria-hidden="true">
+        <div class="buffer-progress-bar"></div>
+      </div>
+    </div>
+
+    <div class="hero-panel">
+      <div class="panel-kicker">Initialization status</div>
+      <div class="hero-status-grid">
+        <div class="status-tile">
+          <span>Workspace bootstrap</span>
+          <strong id="bufferBootstrapState">{{ bootstrap_state.state|capitalize }}</strong>
+          <small id="bufferBootstrapMessage">{{ bootstrap_state.message }}</small>
+        </div>
+        <div class="status-tile">
+          <span>Destination</span>
+          <strong>Overview</strong>
+          <small id="bufferNextPath">{{ next_path }}</small>
+        </div>
+        <div class="status-tile">
+          <span>Environment</span>
+          <strong>{{ greeting_name or 'Workspace user' }}</strong>
+          <small>Applying saved preferences and secure session context.</small>
+        </div>
+        <div class="status-tile">
+          <span>Automatic handoff</span>
+          <strong id="bufferHandoffState">Waiting</strong>
+          <small id="bufferHandoffMessage">You will continue automatically when preparation finishes.</small>
+        </div>
+      </div>
+
+      <div class="status-stack">
+        <div class="status-blade" id="bufferLeadStatus">Please wait while we prepare your workbench.</div>
+        <div class="status-blade subtle" id="bufferSupportStatus">This page will move you into the workspace as soon as the environment is ready.</div>
+      </div>
+
+      <div class="control-row wrap">
+        <button class="ghost" type="button" id="bufferRetryBtn" hidden>Retry preparation</button>
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <button class="ghost" type="submit">Sign out</button>
+        </form>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='buffer.js') }}"></script>
+{% endblock %}

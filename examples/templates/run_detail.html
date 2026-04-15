@@ -8,7 +8,7 @@
         <h1 id="runTitle">Archived run</h1>
       </div>
       <div class="control-row wrap">
-        <a class="ghost" href="{{ url_for('history_page') }}">Back to history</a>
+        <a class="ghost" href="{{ url_for('history_page') }}" data-tooltip="Returns to the account-specific run archive without leaving the current workbench session." aria-label="Explain back to history">Back to history</a>
         <button class="ghost" id="exportCsvBtn" data-tooltip="Download the current run in comma-separated values format." aria-label="Explain export CSV">Export CSV</button>
         <button class="ghost" id="exportJsonBtn" data-tooltip="Download the current run in structured JSON format." aria-label="Explain export JSON">Export JSON</button>
         <button class="ghost" id="exportHtmlBtn" data-tooltip="Download the current run as a standalone HTML report." aria-label="Explain export HTML">Export HTML</button>

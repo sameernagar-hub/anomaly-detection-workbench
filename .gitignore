@@ -142,6 +142,7 @@ data/
 
 # Local project outputs
 examples/uploads/
+examples/runtime/
 temp_docx/
 
 # OS/editor clutter
