@@ -1100,7 +1100,8 @@ code {
 
 .feature-grid,
 .history-grid,
-.run-meta-grid {
+.run-meta-grid,
+.feedback-rating-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
@@ -1188,6 +1189,76 @@ code {
 .docs-stack p {
   margin: 6px 0 0;
   color: var(--muted);
+}
+
+.feedback-form {
+  display: grid;
+  gap: 18px;
+}
+
+.feedback-form textarea {
+  min-height: 160px;
+}
+
+.feedback-rating-grid {
+  margin-top: 6px;
+}
+
+.feedback-rating-card {
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: var(--border-width) solid var(--line);
+  background: linear-gradient(180deg, var(--panel), var(--panel-strong));
+  display: grid;
+  gap: 12px;
+}
+
+.rating-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rating-chip-row input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rating-chip {
+  min-width: 46px;
+  text-align: center;
+  padding: 10px 12px;
+  border-radius: var(--radius-pill);
+  border: var(--border-width) solid var(--line);
+  background: var(--panel-strong);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.rating-chip-row input[type="radio"]:checked + .rating-chip,
+.rating-chip:hover,
+.rating-chip:focus-visible {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent-alt-soft));
+  box-shadow: var(--shadow-soft);
+}
+
+.feedback-rating-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.feedback-card-copy {
+  margin: 12px 0 0;
+  color: var(--text);
+  line-height: 1.6;
 }
 
 .auth-page-shell {

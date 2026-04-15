@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Feedback | CSUF Anomaly Detection Workbench{% endblock %}
+{% block content %}
+  <section class="hero-card">
+    <div class="hero-copy">
+      <div class="eyebrow">Feedback Service</div>
+      <h1>Tell us how the workbench is holding up.</h1>
+      <p>
+        Rate the experience, ask platform questions, and leave user-linked feedback that stays beside your workspace history.
+      </p>
+      <div class="hero-badges">
+        <span>Unique feedback record</span>
+        <span>User-scoped history</span>
+        <span>Ratings and questions</span>
+        <span>Kept inside the workbench</span>
+      </div>
+    </div>
+
+    <div class="hero-panel">
+      <div class="panel-kicker">What gets stored</div>
+      <div class="hero-status-grid">
+        <div class="status-tile">
+          <span>Category</span>
+          <strong>Tracked</strong>
+          <small>Question, idea, bug, or general feedback.</small>
+        </div>
+        <div class="status-tile">
+          <span>Ratings</span>
+          <strong>4 signals</strong>
+          <small>Overall, usability, visual quality, and result clarity.</small>
+        </div>
+        <div class="status-tile">
+          <span>Identity</span>
+          <strong>User linked</strong>
+          <small>Every record stays tied to the active account.</small>
+        </div>
+        <div class="status-tile">
+          <span>Archive</span>
+          <strong>Reusable</strong>
+          <small>You can revisit the same feedback later from history.</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="content-grid">
+    <div class="main-column">
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Submit Feedback</div>
+            <h2>Send a tight read on the platform</h2>
+          </div>
+        </div>
+
+        <form class="feedback-form" method="post" novalidate>
+          <div class="auth-grid">
+            <div>
+              <label class="field-label" for="category">Category</label>
+              <select id="category" name="category">
+                {% for key, label in feedback_categories.items() %}
+                  <option value="{{ key }}" {% if form_data.category == key %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              {% if form_errors.category %}<div class="field-error">{{ form_errors.category }}</div>{% endif %}
+            </div>
+            <div>
+              <label class="field-label" for="title">Short title</label>
+              <input type="text" id="title" name="title" value="{{ form_data.title }}" maxlength="120" placeholder="What stood out?">
+              {% if form_errors.title %}<div class="field-error">{{ form_errors.title }}</div>{% endif %}
+            </div>
+          </div>
+
+          <div class="feedback-rating-grid">
+            {% for field, label in [('overall_rating', 'Overall'), ('usability_rating', 'Usability'), ('visual_rating', 'Visual quality'), ('clarity_rating', 'Result clarity')] %}
+              <div class="feedback-rating-card">
+                <strong>{{ label }}</strong>
+                <div class="rating-chip-row">
+                  {% for rating in ['1', '2', '3', '4', '5'] %}
+                    <label>
+                      <input type="radio" name="{{ field }}" value="{{ rating }}" {% if form_data[field] == rating %}checked{% endif %}>
+                      <span class="rating-chip">{{ rating }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+                {% if form_errors[field] %}<div class="field-error">{{ form_errors[field] }}</div>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+
+          <div>
+            <label class="field-label" for="message">Feedback</label>
+            <textarea id="message" name="message" placeholder="What felt strong, what felt off, and what should change first?">{{ form_data.message }}</textarea>
+            {% if form_errors.message %}<div class="field-error">{{ form_errors.message }}</div>{% endif %}
+          </div>
+
+          <div>
+            <label class="field-label" for="question">Question about the platform</label>
+            <textarea id="question" name="question" placeholder="Ask anything you want answered in the next iteration.">{{ form_data.question }}</textarea>
+          </div>
+
+          <div class="auth-actions">
+            <button class="primary" type="submit">Save feedback</button>
+            <a class="ghost" href="{{ url_for('history_page') }}">Open History</a>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <aside class="side-column">
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Recent Records</div>
+            <h2>Feedback archive</h2>
+          </div>
+        </div>
+        <div class="report-list">
+          {% if feedback_records %}
+            {% for record in feedback_records[:6] %}
+              <article class="report-card">
+                <div class="report-card-head">
+                  <strong>{{ record.title }}</strong>
+                  <span class="pill-label">{{ record.category_label }}</span>
+                </div>
+                <div class="muted">{{ record.created_at }} | {{ record.id }}</div>
+                <div class="feedback-rating-row">
+                  <span>Overall {{ record.overall_rating }}/5</span>
+                  <span>Usability {{ record.usability_rating }}/5</span>
+                  <span>Visual {{ record.visual_rating }}/5</span>
+                  <span>Clarity {{ record.clarity_rating }}/5</span>
+                </div>
+                <p class="feedback-card-copy">{{ record.message }}</p>
+              </article>
+            {% endfor %}
+          {% else %}
+            <div class="report-card muted">No feedback records yet.</div>
+          {% endif %}
+        </div>
+      </section>
+    </aside>
+  </section>
+{% endblock %}

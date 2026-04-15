@@ -6,7 +6,7 @@
 ![Models](https://img.shields.io/badge/Models-Baseline_%2B_Argument--Aware-234B6D?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-See_LICENSE-B3563B?style=for-the-badge)
 
-An interactive anomaly-detection platform for structured log analysis with account-aware workspaces, personalized defaults, buffered post-auth initialization, live monitoring, benchmark evaluation, and archived run review.
+An interactive anomaly-detection platform for structured log analysis with argument-aware scoring, drift-aware monitoring, cross-host evaluation, trusted-device access, personalized defaults, live monitoring, user-linked feedback, and archived run review.
 
 ---
 
@@ -15,12 +15,15 @@ An interactive anomaly-detection platform for structured log analysis with accou
 This repository combines a small reusable sequence-model package with a larger Flask workbench. The web app lets a signed-in user:
 
 - create a local account with profile and workspace preferences
-- sign in with email and password, then complete a built-in human-verification step
+- sign in with email and password, then complete a built-in human-verification step when the user or device still needs to be trusted
+- use `Remember this device` to create a trusted-device record for the same user on the same machine
+- trigger progressive account lockouts after repeated failed password attempts
 - wait on a dedicated workspace buffer page while the environment is prepared after authentication
 - analyze pasted text, uploaded files, or prepared demo samples
 - compare a baseline sequence model against an argument-aware model
 - watch a growing file or replay stream through the live monitoring service
 - save account-scoped runs and revisit them later in the run archive
+- submit ratings, questions, ideas, and bug notes through an in-app feedback service with user-linked records
 - export saved runs as JSON, CSV, or HTML
 - manage profile settings, avatar uploads, theme preferences, and default analysis mode
 - inspect benchmark and proxy cross-host evaluation results from a dedicated service page
@@ -63,7 +66,7 @@ python examples/app.py
 http://127.0.0.1:5000/
 ```
 
-The root route opens the access flow first. After sign-in and human verification, the app sends the user to a temporary workspace buffer page while models and services warm up. Once initialization is ready, the user is redirected into the overview page automatically.
+The root route opens the access flow first. After sign-in and any required human verification, the app sends the user to a temporary workspace buffer page while models and services warm up. Once initialization is ready, the user is redirected into the overview page automatically.
 
 ---
 
@@ -72,7 +75,7 @@ The root route opens the access flow first. After sign-in and human verification
 1. Open `/auth/login` or `/auth/signup`.
 2. Create an account if needed.
 3. Sign in with email and password.
-4. Complete the built-in human-verification challenge:
+4. Complete the built-in human-verification challenge when the user or device still needs trust:
    - scribble code
    - emoji match
 5. Wait on the workspace buffer page while the workbench prepares the environment.
@@ -81,8 +84,16 @@ The root route opens the access flow first. After sign-in and human verification
 ### Remembered Access
 
 - The login page includes a `Remember this device` option.
-- If enabled, the session can remain active longer on that device.
-- If disabled, the session behaves like a shorter-lived standard session.
+- If enabled, the workbench stores a trusted-device token for that user and device.
+- Later sign-ins on the same trusted device can skip human verification until that trust expires.
+- Logging out ends the current session but does not automatically revoke the device trust.
+- Resetting the password revokes existing trusted-device records for that account.
+
+### Account Lockouts
+
+- The access service tracks repeated failed password attempts.
+- Lockouts escalate from short delays to longer blocks if failures continue.
+- A successful login clears the failed-attempt ladder.
 
 ### Password Recovery
 
@@ -104,6 +115,7 @@ The root route opens the access flow first. After sign-in and human verification
 | `Evaluation Service` | Compares baseline and improved models using benchmark metrics | Metrics + cross-host comparison |
 | `FAQ / Docs` | Explains services, metrics, workflows, and troubleshooting | In-app documentation |
 | `Run Archive` | Lists saved runs for the active account | Account-scoped run history |
+| `Feedback Service` | Captures user-linked ratings, questions, bug notes, and suggestions | Saved feedback records |
 | `Run Details` | Opens one archived run | Frozen charts, evidence table, exports |
 | `Profile Service` | Manages account identity, avatar, and defaults | Personalized settings |
 
@@ -158,9 +170,9 @@ anomaly-detection-workbench/
 - `anomaly_detection/preprocessor.py`
   Event sequencing and CSV/TXT preprocessing helpers.
 - `examples/app.py`
-  Main Flask app, route wiring, bootstrap gating, run persistence, live state, and exports.
+  Main Flask app, route wiring, bootstrap gating, run persistence, feedback persistence, live state, and exports.
 - `examples/auth.py`
-  Signup, login, remembered sessions, human verification, profile management, avatar handling, and password reset.
+  Signup, login, trusted-device access, progressive lockouts, human verification, profile management, avatar handling, and password reset.
 - `examples/workbench.py`
   Parsing, feature extraction, model loading, inference, reporting, live monitoring, and exports.
 - `examples/db.py`
@@ -198,6 +210,7 @@ Main user-facing routes:
 - `/evaluation`
 - `/docs`
 - `/history`
+- `/feedback`
 - `/runs/<run_id>`
 
 Main API routes:
@@ -208,6 +221,8 @@ Main API routes:
 - `/api/analyze/text`
 - `/api/analyze/upload`
 - `/api/runs`
+- `/api/feedback`
+- `/api/profile/theme`
 - `/api/live/start`
 - `/api/live/stop`
 - `/api/live/status`
@@ -256,6 +271,7 @@ python -m anomaly_detection predict --csv path/to/events.csv --load model.pt
 - Uploaded files: `examples/uploads/`
 - Replay-generated live files: `examples/demo_runtime/`
 - Runtime database, avatars, and local mail outbox: `examples/runtime/`
+- Trusted-device records and feedback history are stored in the same runtime SQLite database.
 
 ---
 
@@ -290,6 +306,9 @@ This is still a prototype, but a few guardrails are built in:
 - password policy checks enforce length and character diversity
 - password reset tokens are stored as digests, not plaintext
 - generating a new reset request invalidates older pending reset tokens for that user
+- remembered access uses trusted-device tokens stored as digests, not plaintext
+- resetting a password revokes existing trusted-device records
+- repeated failed password attempts trigger progressive temporary lockouts
 - the app keeps the main workspace gated until post-auth initialization completes
 - session cookies are configured as `HttpOnly` and `SameSite=Lax`
 - the app supports an explicit secret key via environment variable instead of requiring a hardcoded development secret
@@ -317,16 +336,18 @@ Common checks:
 
 - If login succeeds but the app pauses on the buffer page, give the model warmup worker time to finish or use the retry button if initialization failed.
 - If password-reset emails do not appear in an inbox, check `examples/runtime/outbox/`.
+- If the header theme resets unexpectedly, confirm the profile save request succeeded and the account is still signed in.
 - If the avatar does not appear, use a supported image format and keep the file size within the configured limit.
 - If the live monitor shows no updates, make sure the target file exists, is growing, and the correct system label is selected.
 - If evaluation is still pending, allow the benchmark worker time to finish after bootstrap completes.
+- If remembered access stops skipping verification, the trusted-device window may have expired or the password may have been reset.
 - If inference fails, refresh model artifacts with `python examples/train_models.py`.
 
 ---
 
 ## Current Scope
 
-This repository is still best understood as an academic and engineering prototype with a functional interface. It already supports a multi-service workflow with account-aware personalization, buffered post-auth initialization, and archived reporting, but there is still room for future work such as:
+This repository is still best understood as an academic and engineering prototype with a functional interface. It already supports a multi-service workflow with user-scoped personalization, buffered post-auth initialization, and archived reporting, but there is still room for future work such as:
 
 - production-grade CSRF protection
 - stronger secret and deployment management

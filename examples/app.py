@@ -12,7 +12,7 @@ from pathlib import Path
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
-from flask import Flask, Response, abort, jsonify, redirect, render_template, request, send_file, url_for
+from flask import Flask, Response, abort, flash, jsonify, redirect, render_template, request, send_file, url_for
 from werkzeug.utils import secure_filename
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -52,6 +52,13 @@ app.register_blueprint(auth_bp)
 MODEL_NAMES = {
     "baseline": {"label": "Baseline Sentinel", "subtitle": "Baseline sequence model"},
     "improved": {"label": "Apex Insight", "subtitle": "Improved argument-aware model"},
+}
+THEME_OPTIONS = {"campus", "midnight", "signal"}
+FEEDBACK_CATEGORIES = {
+    "question": "Platform question",
+    "idea": "Improvement idea",
+    "bug": "Bug report",
+    "general": "General feedback",
 }
 
 SAMPLE_SCENARIOS = [
@@ -154,6 +161,23 @@ def _user_upload_dir(user_id: int) -> Path:
     return path
 
 
+def _row_to_feedback(row: Any) -> Dict[str, Any]:
+    record = dict(row)
+    return {
+        "id": record["feedback_key"],
+        "category": record["category"],
+        "category_label": FEEDBACK_CATEGORIES.get(record["category"], "Feedback"),
+        "overall_rating": record["overall_rating"],
+        "usability_rating": record["usability_rating"],
+        "visual_rating": record["visual_rating"],
+        "clarity_rating": record["clarity_rating"],
+        "title": record["title"],
+        "message": record["message"],
+        "question": record["question"],
+        "created_at": record["created_at"],
+    }
+
+
 def _row_to_run(row: Any) -> Dict[str, Any]:
     run = dict(row)
     return {
@@ -187,6 +211,46 @@ def _list_runs(user_id: int) -> List[Dict[str, Any]]:
         (user_id, RUN_LIMIT),
     ).fetchall()
     return [_run_summary(_row_to_run(row)) for row in rows]
+
+
+def _list_feedback(user_id: int, limit: int = 30) -> List[Dict[str, Any]]:
+    rows = _db().execute(
+        "SELECT * FROM feedback_records WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+        (user_id, limit),
+    ).fetchall()
+    return [_row_to_feedback(row) for row in rows]
+
+
+def _store_feedback(user_id: int, payload: Dict[str, Any]) -> Dict[str, Any]:
+    feedback_key = f"FDBK-{uuid.uuid4().hex[:8].upper()}"
+    created_at = _timestamp()
+    _db().execute(
+        """
+        INSERT INTO feedback_records (
+            user_id, feedback_key, category, overall_rating, usability_rating, visual_rating, clarity_rating,
+            title, message, question, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            user_id,
+            feedback_key,
+            payload["category"],
+            payload["overall_rating"],
+            payload["usability_rating"],
+            payload["visual_rating"],
+            payload["clarity_rating"],
+            payload["title"],
+            payload["message"],
+            payload.get("question", ""),
+            created_at,
+        ),
+    )
+    _db().commit()
+    row = _db().execute(
+        "SELECT * FROM feedback_records WHERE user_id = ? AND feedback_key = ?",
+        (user_id, feedback_key),
+    ).fetchone()
+    return _row_to_feedback(row)
 
 
 def _current_run(user_id: int) -> Optional[Dict[str, Any]]:
@@ -282,6 +346,8 @@ def _user_bootstrap(page: str, extras: Optional[Dict[str, Any]] = None) -> Dict[
             "analysis_mode": (profile or {}).get("preferred_analysis_mode", "compare"),
             "live_trace_os": (profile or {}).get("live_trace_os_preference", "Windows"),
         },
+        "theme_options": sorted(THEME_OPTIONS),
+        "feedback_categories": FEEDBACK_CATEGORIES,
     }
     if extras:
         payload.update(extras)
@@ -549,6 +615,7 @@ def project_status(user_id: int) -> Dict[str, Any]:
         "live": live_monitor.status(),
         "replay": replay.status(),
         "recent_runs": _list_runs(user_id),
+        "recent_feedback": _list_feedback(user_id, limit=6),
         "current_run": _run_summary(current_run) if current_run else None,
         "current_result": current_run["result"] if current_run else None,
         "model_names": MODEL_NAMES,
@@ -631,6 +698,69 @@ def history_page() -> str:
     return render_template("history.html", active_page="history", bootstrap_data=_user_bootstrap("history"))
 
 
+@app.route("/feedback", methods=["GET", "POST"])
+@login_required
+@workbench_ready_required
+def feedback_page() -> str | Response:
+    user = current_user()
+    form_data = {
+        "category": "question",
+        "overall_rating": "5",
+        "usability_rating": "5",
+        "visual_rating": "5",
+        "clarity_rating": "5",
+        "title": "",
+        "message": "",
+        "question": "",
+    }
+    errors: Dict[str, str] = {}
+    if request.method == "POST" and user:
+        form_data.update({
+            "category": str(request.form.get("category", "question")).strip(),
+            "overall_rating": str(request.form.get("overall_rating", "5")).strip(),
+            "usability_rating": str(request.form.get("usability_rating", "5")).strip(),
+            "visual_rating": str(request.form.get("visual_rating", "5")).strip(),
+            "clarity_rating": str(request.form.get("clarity_rating", "5")).strip(),
+            "title": str(request.form.get("title", "")).strip(),
+            "message": str(request.form.get("message", "")).strip(),
+            "question": str(request.form.get("question", "")).strip(),
+        })
+        if form_data["category"] not in FEEDBACK_CATEGORIES:
+            errors["category"] = "Choose a valid feedback category."
+        for field in ("overall_rating", "usability_rating", "visual_rating", "clarity_rating"):
+            if form_data[field] not in {"1", "2", "3", "4", "5"}:
+                errors[field] = "Ratings must stay between 1 and 5."
+        if len(form_data["title"]) < 4:
+            errors["title"] = "Add a short title so you can recognize this feedback later."
+        if len(form_data["message"]) < 12:
+            errors["message"] = "Share a little more detail so the feedback is useful."
+        if not errors:
+            _store_feedback(
+                int(user["id"]),
+                {
+                    "category": form_data["category"],
+                    "overall_rating": int(form_data["overall_rating"]),
+                    "usability_rating": int(form_data["usability_rating"]),
+                    "visual_rating": int(form_data["visual_rating"]),
+                    "clarity_rating": int(form_data["clarity_rating"]),
+                    "title": form_data["title"],
+                    "message": form_data["message"],
+                    "question": form_data["question"],
+                },
+            )
+            flash("Feedback saved. Thanks for helping tighten the workbench.", "success")
+            return redirect(url_for("feedback_page"))
+    return render_template(
+        "feedback.html",
+        active_page="feedback",
+        bootstrap_data=_user_bootstrap("feedback"),
+        form_data=form_data,
+        form_errors=errors,
+        feedback_records=_list_feedback(int(user["id"])) if user else [],
+        feedback_categories=FEEDBACK_CATEGORIES,
+    )
+
+
 @app.route("/runs/<run_id>")
 @login_required
 @workbench_ready_required
@@ -645,6 +775,22 @@ def run_detail(run_id: str) -> str:
 def api_status():
     user = current_user()
     return jsonify(project_status(int(user["id"])))
+
+
+@app.route("/api/profile/theme", methods=["POST"])
+@login_required
+def api_profile_theme():
+    user = current_user()
+    payload = request.get_json(force=True)
+    theme = str(payload.get("theme", "")).strip()
+    if theme not in THEME_OPTIONS:
+        return jsonify({"error": "Unsupported theme."}), 400
+    _db().execute(
+        "UPDATE user_profiles SET preferred_theme = ?, updated_at = ? WHERE user_id = ?",
+        (theme, datetime.now().astimezone().isoformat(), int(user["id"])),
+    )
+    _db().commit()
+    return jsonify({"theme": theme})
 
 
 @app.route("/api/evaluation")
@@ -768,6 +914,14 @@ def api_runs():
     user = current_user()
     current_run = _current_run(int(user["id"]))
     return jsonify({"runs": _list_runs(int(user["id"])), "current_run_id": current_run["id"] if current_run else None})
+
+
+@app.route("/api/feedback")
+@login_required
+@workbench_ready_required
+def api_feedback():
+    user = current_user()
+    return jsonify({"feedback": _list_feedback(int(user["id"]))})
 
 
 @app.route("/api/runs/<run_id>")

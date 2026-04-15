@@ -33,6 +33,20 @@
     return getComputedStyle(document.body).getPropertyValue(name).trim();
   }
 
+  async function persistTheme(theme) {
+    if (!bootstrap.current_user) return;
+    try {
+      await fetchJSON("/api/profile/theme", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme }),
+      });
+      if (bootstrap.preferences) bootstrap.preferences.theme = theme;
+    } catch (error) {
+      console.error("Unable to persist theme preference.", error);
+    }
+  }
+
   function setTheme(theme) {
     document.body.dataset.theme = theme;
     const select = document.getElementById("themeSelect");
@@ -45,7 +59,11 @@
     setTheme(theme);
     const select = document.getElementById("themeSelect");
     if (select) {
-      select.addEventListener("change", (event) => setTheme(event.target.value));
+      select.addEventListener("change", async (event) => {
+        const value = event.target.value;
+        setTheme(value);
+        await persistTheme(value);
+      });
     }
   }
 
@@ -347,6 +365,31 @@
     `).join("");
   }
 
+  function renderFeedbackCards(container, feedback, emptyMessage) {
+    if (!container) return;
+    if (!feedback || !feedback.length) {
+      container.innerHTML = `<div class="report-card muted">${emptyMessage}</div>`;
+      return;
+    }
+    container.innerHTML = feedback.map((entry) => `
+      <article class="report-card">
+        <div class="report-card-head">
+          <strong>${entry.title}</strong>
+          <span class="pill-label">${entry.category_label}</span>
+        </div>
+        <div class="muted">${entry.created_at || "pending"} | ${entry.id}</div>
+        <div class="feedback-rating-row">
+          <span>Overall ${entry.overall_rating}/5</span>
+          <span>Usability ${entry.usability_rating}/5</span>
+          <span>Visual ${entry.visual_rating}/5</span>
+          <span>Clarity ${entry.clarity_rating}/5</span>
+        </div>
+        <p class="feedback-card-copy">${entry.message}</p>
+        ${entry.question ? `<div class="report-card subtle"><strong>Question</strong><p>${entry.question}</p></div>` : ""}
+      </article>
+    `).join("");
+  }
+
   function renderScenarioGrid(container, samples, handlers) {
     if (!container) return;
     container.innerHTML = (samples || []).map((sample) => `
@@ -415,6 +458,7 @@
     populateHostFilter,
     renderResultsTable,
     renderRunCards,
+    renderFeedbackCards,
     renderScenarioGrid,
     renderPathList,
   };

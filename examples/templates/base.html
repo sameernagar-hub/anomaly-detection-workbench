@@ -62,6 +62,7 @@
           <a class="nav-link {% if active_page == 'evaluation' %}active{% endif %}" href="{{ url_for('evaluation_page') }}" data-nav-link>Evaluation Service</a>
           <a class="nav-link {% if active_page == 'docs' %}active{% endif %}" href="{{ url_for('docs_page') }}" data-nav-link>FAQ / Docs</a>
           <a class="nav-link {% if active_page == 'history' %}active{% endif %}" href="{{ url_for('history_page') }}" data-nav-link>Run Archive</a>
+          <a class="nav-link {% if active_page == 'feedback' %}active{% endif %}" href="{{ url_for('feedback_page') }}" data-nav-link>Feedback</a>
         </nav>
       </div>
     {% endif %}
@@ -87,24 +88,28 @@
           <div class="brand-mark">AD</div>
           <div>
             <div class="eyebrow">Anomaly Detection Workbench</div>
-            <strong>Secure analysis, live monitoring, and archived review.</strong>
+            <strong>Argument-aware detection, drift tracking, and cross-host review.</strong>
           </div>
         </a>
         <p>
-          A polished anomaly-detection workspace with guided access, personalized defaults, buffered environment
-          preparation, benchmark evaluation, and run history built for structured log review.
+          A focused workbench for anomaly analysis with secure access, remembered preferences, live monitoring,
+          benchmark evaluation, run history, and user-linked feedback records.
         </p>
         <div class="footer-spotlight">
-          <div class="eyebrow">Studio Signal</div>
-          <strong>Built for analysts who want the story, not just the score.</strong>
+          <div class="eyebrow">Workbench Scope</div>
+          <strong>Built to compare baseline behavior against an argument-aware, drift-robust workflow.</strong>
           <p>
-            Move from secure sign-in to buffered startup, live telemetry review, benchmark comparison, and archived
-            evidence without losing workspace context.
+            Move from sign-in to warmup, analysis, live telemetry, cross-host evaluation, and archived evidence
+            without losing the thread of the investigation.
           </p>
         </div>
         <div class="footer-socials">
           <a class="ghost compact" href="https://github.com/sameernagar-hub/anomaly-detection-workbench" target="_blank" rel="noopener noreferrer">GitHub</a>
-          <a class="ghost compact" href="https://github.com/sameernagar-hub/anomaly-detection-workbench/issues" target="_blank" rel="noopener noreferrer">Feedback</a>
+          {% if auth_user %}
+            <a class="ghost compact" href="{{ url_for('feedback_page') }}">Feedback</a>
+          {% else %}
+            <a class="ghost compact" href="{{ url_for('auth.login') }}">Feedback</a>
+          {% endif %}
         </div>
       </section>
 
@@ -117,6 +122,7 @@
             <a href="{{ url_for('live_page') }}">Live Monitor</a>
             <a href="{{ url_for('evaluation_page') }}">Evaluation</a>
             <a href="{{ url_for('history_page') }}">Run Archive</a>
+            <a href="{{ url_for('feedback_page') }}">Feedback</a>
           {% else %}
             <a href="{{ url_for('auth.login') }}">Log in</a>
             <a href="{{ url_for('auth.signup') }}">Create account</a>
@@ -130,6 +136,7 @@
           {% if auth_user %}
             <a href="{{ url_for('auth.profile_page') }}">Profile</a>
             <a href="{{ url_for('docs_page') }}">FAQ / Docs</a>
+            <a href="{{ url_for('feedback_page') }}">Feedback center</a>
             <a href="{{ url_for('overview') }}">Current status</a>
             <span class="footer-meta">{{ auth_user.public_user_id }}</span>
           {% else %}
@@ -144,7 +151,11 @@
           <div class="eyebrow">Project</div>
           <a href="{{ url_for('docs_page') if auth_user else 'https://github.com/sameernagar-hub/anomaly-detection-workbench#readme' }}" {% if not auth_user %}target="_blank" rel="noopener noreferrer"{% endif %}>Documentation</a>
           <a href="https://github.com/sameernagar-hub/anomaly-detection-workbench" target="_blank" rel="noopener noreferrer">Contribute on GitHub</a>
-          <a href="https://github.com/sameernagar-hub/anomaly-detection-workbench/issues" target="_blank" rel="noopener noreferrer">Report an issue</a>
+          {% if auth_user %}
+            <a href="{{ url_for('feedback_page') }}">Ask about the platform</a>
+          {% else %}
+            <a href="https://github.com/sameernagar-hub/anomaly-detection-workbench/issues" target="_blank" rel="noopener noreferrer">Report an issue</a>
+          {% endif %}
           <span class="footer-meta">CSUF anomaly detection workbench prototype</span>
         </article>
       </section>
@@ -152,8 +163,8 @@
 
     <div class="footer-bar">
       <span>Anomaly Detection Workbench</span>
-      <span>Account-aware prototype for structured log analysis</span>
-      <span>Feedback and contributions welcome on GitHub</span>
+      <span>Argument-aware, drift-robust, cross-host generalized analysis</span>
+      <span>Feedback stays tied to the signed-in user and workspace</span>
     </div>
   </footer>
 

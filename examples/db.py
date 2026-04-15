@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS users (
     is_active INTEGER NOT NULL DEFAULT 1,
     email_verified INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
+    failed_login_attempts INTEGER NOT NULL DEFAULT 0,
+    lockout_level INTEGER NOT NULL DEFAULT 0,
+    locked_until TEXT,
+    last_failed_login_at TEXT,
     last_login_at TEXT,
     last_otp_verified_at TEXT
 );
@@ -88,9 +92,40 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS trusted_devices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    device_label TEXT,
+    user_agent TEXT,
+    expires_at TEXT NOT NULL,
+    last_used_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    revoked_at TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS feedback_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    feedback_key TEXT NOT NULL UNIQUE,
+    category TEXT NOT NULL,
+    overall_rating INTEGER NOT NULL,
+    usability_rating INTEGER NOT NULL,
+    visual_rating INTEGER NOT NULL,
+    clarity_rating INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    question TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_user_runs_user_created ON user_runs(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_user_uploads_user_created ON user_uploads(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_human_challenges_user_type ON human_challenges(user_id, challenge_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_trusted_devices_user_created ON trusted_devices(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_feedback_records_user_created ON feedback_records(user_id, created_at DESC);
 """
 
 
@@ -110,6 +145,10 @@ def connect_db(db_path: Path) -> sqlite3.Connection:
 def init_db(connection: sqlite3.Connection) -> None:
     connection.executescript(SCHEMA)
     _ensure_column(connection, "users", "public_user_id", "TEXT")
+    _ensure_column(connection, "users", "failed_login_attempts", "INTEGER NOT NULL DEFAULT 0")
+    _ensure_column(connection, "users", "lockout_level", "INTEGER NOT NULL DEFAULT 0")
+    _ensure_column(connection, "users", "locked_until", "TEXT")
+    _ensure_column(connection, "users", "last_failed_login_at", "TEXT")
     _ensure_column(connection, "user_profiles", "first_name", "TEXT")
     _ensure_column(connection, "user_profiles", "last_name", "TEXT")
     _ensure_column(connection, "user_profiles", "primary_os", "TEXT")

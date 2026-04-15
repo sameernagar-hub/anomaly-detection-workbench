@@ -17,11 +17,18 @@ from human_verification import make_human_challenge_bundle, validate_human_bundl
 from security import digest_secret, generate_token, hash_password, is_valid_email, normalize_email, password_policy_feedback, password_strength, verify_password
 
 REMEMBER_DAYS = 21
+TRUSTED_DEVICE_COOKIE = "adw_trusted_device"
+TRUSTED_DEVICE_DAYS = 30
 VERIFY_WINDOW_MINUTES = 5
 MAX_VERIFY_ATTEMPTS = 5
 RESET_EXPIRY_MINUTES = 30
 ALLOWED_AVATAR_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 MAX_AVATAR_BYTES = 2 * 1024 * 1024
+LOCKOUT_WINDOWS = {
+    1: timedelta(minutes=15),
+    2: timedelta(hours=1),
+    3: timedelta(days=1),
+}
 
 auth_bp = Blueprint("auth", __name__, template_folder="templates")
 
@@ -65,6 +72,15 @@ def _make_public_user_id() -> str:
     return f"ADW-{uuid.uuid4().hex[:8].upper()}"
 
 
+def _parse_datetime(value: Any) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+
 def fetch_user_by_id(user_id: Optional[int]) -> Optional[Dict[str, Any]]:
     if not user_id:
         return None
@@ -80,6 +96,145 @@ def fetch_user_by_email(email: str) -> Optional[Dict[str, Any]]:
 def fetch_profile(user_id: int) -> Optional[Dict[str, Any]]:
     row = _db().execute("SELECT * FROM user_profiles WHERE user_id = ?", (user_id,)).fetchone()
     return row_to_dict(row)
+
+
+def _user_lock_state(user: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    locked_until = _parse_datetime((user or {}).get("locked_until"))
+    active = bool(locked_until and now_utc() < locked_until)
+    return {
+        "active": active,
+        "locked_until": locked_until,
+        "failed_attempts": int((user or {}).get("failed_login_attempts") or 0),
+        "level": int((user or {}).get("lockout_level") or 0),
+    }
+
+
+def _clear_login_failures(user_id: int) -> None:
+    _db().execute(
+        """
+        UPDATE users
+        SET failed_login_attempts = 0, lockout_level = 0, locked_until = NULL, last_failed_login_at = NULL
+        WHERE id = ?
+        """,
+        (user_id,),
+    )
+    _db().commit()
+
+
+def _record_failed_login(user: Dict[str, Any]) -> Dict[str, Any]:
+    attempts = int(user.get("failed_login_attempts") or 0) + 1
+    level = 0
+    if attempts >= 7:
+        level = 3
+    elif attempts >= 5:
+        level = 2
+    elif attempts >= 3:
+        level = 1
+
+    locked_until = None
+    if level:
+        locked_until = now_utc() + LOCKOUT_WINDOWS[level]
+
+    _db().execute(
+        """
+        UPDATE users
+        SET failed_login_attempts = ?, lockout_level = ?, locked_until = ?, last_failed_login_at = ?
+        WHERE id = ?
+        """,
+        (
+            attempts,
+            level,
+            locked_until.isoformat() if locked_until else None,
+            now_text(),
+            int(user["id"]),
+        ),
+    )
+    _db().commit()
+    refreshed = fetch_user_by_id(int(user["id"])) or user
+    return _user_lock_state(refreshed)
+
+
+def _trusted_device_token() -> str:
+    return str(request.cookies.get(TRUSTED_DEVICE_COOKIE, "")).strip()
+
+
+def _trusted_device_row(token: str, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    if not token:
+        return None
+    token_hash = digest_secret(token)
+    if user_id is None:
+        row = _db().execute(
+            "SELECT * FROM trusted_devices WHERE token_hash = ? AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1",
+            (token_hash,),
+        ).fetchone()
+    else:
+        row = _db().execute(
+            """
+            SELECT * FROM trusted_devices
+            WHERE token_hash = ? AND user_id = ? AND revoked_at IS NULL
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            (token_hash, user_id),
+        ).fetchone()
+    payload = row_to_dict(row)
+    expires_at = _parse_datetime((payload or {}).get("expires_at"))
+    if not payload or not expires_at or now_utc() >= expires_at:
+        return None
+    return payload
+
+
+def _touch_trusted_device(device_id: int) -> None:
+    _db().execute(
+        "UPDATE trusted_devices SET last_used_at = ? WHERE id = ?",
+        (now_text(), device_id),
+    )
+    _db().commit()
+
+
+def _trusted_device_matches(user: Dict[str, Any]) -> bool:
+    device = _trusted_device_row(_trusted_device_token(), int(user["id"]))
+    if not device:
+        return False
+    _touch_trusted_device(int(device["id"]))
+    return True
+
+
+def _issue_trusted_device(response: Response, user: Dict[str, Any]) -> None:
+    raw_token = generate_token(18)
+    now_value = now_text()
+    expires_at = (now_utc() + timedelta(days=TRUSTED_DEVICE_DAYS)).isoformat()
+    _db().execute(
+        """
+        INSERT INTO trusted_devices (user_id, token_hash, device_label, user_agent, expires_at, last_used_at, created_at, revoked_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+        """,
+        (
+            int(user["id"]),
+            digest_secret(raw_token),
+            request.headers.get("User-Agent", "")[:120],
+            request.headers.get("User-Agent", "")[:255],
+            expires_at,
+            now_value,
+            now_value,
+        ),
+    )
+    _db().commit()
+    response.set_cookie(
+        TRUSTED_DEVICE_COOKIE,
+        raw_token,
+        max_age=int(timedelta(days=TRUSTED_DEVICE_DAYS).total_seconds()),
+        httponly=True,
+        secure=current_app.config.get("SESSION_COOKIE_SECURE", False),
+        samesite="Lax",
+    )
+
+
+def _revoke_trusted_devices(user_id: int) -> None:
+    _db().execute(
+        "UPDATE trusted_devices SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL",
+        (now_text(), user_id),
+    )
+    _db().commit()
 
 
 def current_user() -> Optional[Dict[str, Any]]:
@@ -340,6 +495,7 @@ def complete_password_reset(token_row: Dict[str, Any], new_password: str) -> Non
         (now_text(), int(token_row["user_id"])),
     )
     database.commit()
+    _revoke_trusted_devices(int(token_row["user_id"]))
 
 
 def login_user(user: Dict[str, Any], remember_me: bool = False) -> None:
@@ -348,6 +504,7 @@ def login_user(user: Dict[str, Any], remember_me: bool = False) -> None:
     if remember_me:
         current_app.permanent_session_lifetime = timedelta(days=REMEMBER_DAYS)
     _clear_pending_verification()
+    _clear_login_failures(int(user["id"]))
     _db().execute(
         "UPDATE users SET last_login_at = ?, last_otp_verified_at = ? WHERE id = ?",
         (now_text(), now_text(), int(user["id"])),
@@ -421,10 +578,39 @@ def login() -> str | Response:
         email = form_data["email"]
         password = str(request.form.get("password", ""))
         user = fetch_user_by_email(email)
-        if not user or not verify_password(str(user["password_hash"]), password):
-            flash("The email or password does not match our records. Verify both fields and try again, or reset your password if you need to recover access.", "error")
+        lock_state = _user_lock_state(user)
+        if lock_state["active"]:
+            locked_until = lock_state["locked_until"]
+            flash(
+                f"This account is temporarily locked until {locked_until.astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}.",
+                "error",
+            )
+        elif not user or not verify_password(str(user["password_hash"]), password):
+            if user:
+                updated_lock = _record_failed_login(user)
+                if updated_lock["active"]:
+                    until = updated_lock["locked_until"]
+                    flash(
+                        f"Too many failed sign-in attempts. This account is locked until {until.astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}.",
+                        "error",
+                    )
+                else:
+                    remaining = max(0, 3 - updated_lock["failed_attempts"])
+                    if remaining > 0:
+                        flash(
+                            f"The email or password does not match our records. {remaining} more failed attempt(s) before a temporary lock.",
+                            "error",
+                        )
+                    else:
+                        flash("The email or password does not match our records.", "error")
+            else:
+                flash("The email or password does not match our records.", "error")
         elif int(user.get("is_active", 0)) != 1:
             flash("This account is inactive.", "error")
+        elif _trusted_device_matches(user):
+            login_user(user, remember_me=form_data["remember_me"])
+            flash("Trusted device recognized. Welcome back.", "success")
+            return redirect(_safe_next_path(next_path))
         else:
             session["pending_next"] = _safe_next_path(next_path)
             _set_pending_verification(int(user["id"]), form_data["remember_me"])
@@ -490,9 +676,13 @@ def verify_human() -> str | Response:
         )
         if ok:
             redirect_target = session.get("pending_next") or url_for("overview")
-            login_user(pending_user, remember_me=_truthy(session.get("pending_remember_me")))
+            remember_requested = _truthy(session.get("pending_remember_me"))
+            login_user(pending_user, remember_me=remember_requested)
             flash("Identity verified. We're preparing your workspace now.", "success")
-            return redirect(url_for("buffer_page", next=redirect_target))
+            response = redirect(url_for("buffer_page", next=redirect_target))
+            if remember_requested:
+                _issue_trusted_device(response, pending_user)
+            return response
         if attempts >= MAX_VERIFY_ATTEMPTS:
             _refresh_human_challenge()
             flash("Too many misses. We refreshed the challenge for you.", "error")

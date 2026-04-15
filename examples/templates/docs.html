@@ -63,11 +63,11 @@
           </article>
           <article class="report-card">
             <strong>3. Human verification</strong>
-            <p>Complete the scribble code and emoji match before a secured session opens.</p>
+            <p>Complete the scribble code and emoji match the first time a user signs in on a device, or again after trusted access expires.</p>
           </article>
           <article class="report-card">
             <strong>4. Remembered access</strong>
-            <p>If you opt into Remember this device, the service can keep a trusted session active longer on that device.</p>
+            <p>If you opt into Remember this device, the workbench stores device trust for that user so later sign-ins can skip verification until the trust window ends.</p>
           </article>
         </div>
       </section>
@@ -96,7 +96,7 @@
           </div>
         </div>
         <div class="docs-stack">
-          <article class="report-card"><strong>Overview</strong><p>Use this page to confirm model readiness, review the latest saved result, and see the current account-aware system status.</p></article>
+          <article class="report-card"><strong>Overview</strong><p>Use this page to confirm model readiness, review the latest saved result, and see the current user-scoped system status.</p></article>
           <article class="report-card"><strong>Analysis Service</strong><p>Run anomaly detection on pasted text, uploaded files, or prepared scenarios. New runs inherit your profile-aware defaults where applicable.</p></article>
           <article class="report-card"><strong>Live Monitoring Service</strong><p>Monitor an updating file or replay stream while labeling the traced system as Windows, Linux, or macOS so archived snapshots preserve that context.</p></article>
           <article class="report-card"><strong>Run Archive</strong><p>Saved runs are private to the active account and can carry profile-linked metadata such as public user ID and live-trace context.</p></article>
@@ -133,7 +133,7 @@
         </div>
         <div class="docs-stack">
           <article class="report-card"><strong>Why am I asked to complete a human check?</strong><p>The access service uses a local human-verification sequence before opening a secured workspace session.</p></article>
-          <article class="report-card"><strong>What does Remember this device do?</strong><p>If you opt in, the platform can keep a trusted session active longer so you do not need to repeat the full sign-in flow every visit.</p></article>
+          <article class="report-card"><strong>What does Remember this device do?</strong><p>It creates a trusted-device record for the same user on the same device, which lets later sign-ins skip the human check until that trust expires.</p></article>
           <article class="report-card"><strong>What is the public user ID for?</strong><p>It provides a stable account identifier that can follow saved run metadata and live service context.</p></article>
           <article class="report-card"><strong>Why does Live Monitoring ask for a system label?</strong><p>The Windows, Linux, or macOS label preserves operating-system context for live traces and archived snapshots.</p></article>
           <article class="report-card"><strong>Can I change my avatar later?</strong><p>Yes. The Profile service supports avatar upload, replacement, or a return to initials-based presentation.</p></article>

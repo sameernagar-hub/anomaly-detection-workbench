@@ -17,6 +17,22 @@
     </p>
     <div class="history-grid" id="historyGrid"></div>
   </section>
+
+  <section class="glass-card section-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Feedback Archive</div>
+        <h2>Saved feedback records</h2>
+      </div>
+      <div class="section-actions">
+        <a class="ghost" href="{{ url_for('feedback_page') }}">Open Feedback</a>
+      </div>
+    </div>
+    <p class="section-copy">
+      Questions, ratings, ideas, and bug notes stay scoped to the active user so feedback history is as easy to revisit as run history.
+    </p>
+    <div class="history-grid" id="feedbackHistoryGrid"></div>
+  </section>
 {% endblock %}
 {% block scripts %}
   <script src="{{ url_for('static', filename='history.js') }}"></script>

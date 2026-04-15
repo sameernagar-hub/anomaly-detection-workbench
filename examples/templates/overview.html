@@ -6,8 +6,8 @@
       <div class="eyebrow">System Overview</div>
       <h1>Hi {{ greeting_name or 'there' }}. Your anomaly detection workbench is ready.</h1>
       <p>
-        An interactive anomaly-detection system for structured log analysis with separate services
-        for analysis, live monitoring, evaluation, and archived run review, now tuned to your profile and private archive.
+        A user-scoped anomaly analysis workspace for structured logs with dedicated services for analysis,
+        live monitoring, evaluation, feedback, and archived review.
       </p>
       <div class="slide-shell">
         <div class="slide-header">
@@ -151,6 +151,10 @@
           <a class="feature-card" href="{{ url_for('history_page') }}">
             <strong>Run Archive</strong>
             <p>Reopen saved anomaly detection runs later and inspect their charts, evidence tables, exports, and metadata.</p>
+          </a>
+          <a class="feature-card" href="{{ url_for('feedback_page') }}">
+            <strong>Feedback</strong>
+            <p>Rate the workbench, ask platform questions, and keep a user-linked feedback record beside your saved investigation history.</p>
           </a>
         </div>
       </section>
