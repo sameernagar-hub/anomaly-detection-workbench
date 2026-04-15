@@ -804,6 +804,45 @@ select {
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
 }
 
+input[type="file"] {
+  cursor: pointer;
+}
+
+input[type="file"]::file-selector-button {
+  margin: -8px 14px -8px -10px;
+  border: var(--border-width) solid var(--line);
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent-alt-soft));
+  color: var(--accent-strong);
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+input[type="file"]::-webkit-file-upload-button {
+  margin: -8px 14px -8px -10px;
+  border: var(--border-width) solid var(--line);
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent-alt-soft));
+  color: var(--accent-strong);
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+input[type="file"]:hover::file-selector-button,
+input[type="file"]:focus::file-selector-button,
+input[type="file"]:hover::-webkit-file-upload-button,
+input[type="file"]:focus::-webkit-file-upload-button {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-soft);
+}
+
 select {
   appearance: none;
   background-image:
