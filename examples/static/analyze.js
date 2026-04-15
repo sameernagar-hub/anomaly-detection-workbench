@@ -48,17 +48,34 @@
       els.analysisStatus.textContent = "Choose an upload file first.";
       return;
     }
-    els.analysisStatus.textContent = "Uploading and analyzing file...";
-    const formData = new FormData();
-    formData.append("file", els.uploadFile.files[0]);
-    formData.append("mode", els.analysisMode.value);
-    const response = await fetch("/api/analyze/upload", { method: "POST", body: formData });
-    const data = await response.json();
-    if (!response.ok) {
-      els.analysisStatus.textContent = data.error || "Upload failed.";
-      return;
+    try {
+      els.analysisStatus.textContent = "Uploading and analyzing file...";
+      const formData = new FormData();
+      formData.append("file", els.uploadFile.files[0]);
+      formData.append("mode", els.analysisMode.value);
+      const response = await fetch("/api/analyze/upload", { method: "POST", body: formData });
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (error) {
+        data = {};
+      }
+      if (response.status === 401) {
+        window.location.href = "/auth/login";
+        return;
+      }
+      if (response.status === 503 && data?.redirect) {
+        window.location.href = data.redirect;
+        return;
+      }
+      if (!response.ok) {
+        els.analysisStatus.textContent = data.error || "Upload failed.";
+        return;
+      }
+      goToRun(data.run);
+    } catch (error) {
+      els.analysisStatus.textContent = error.message || "Upload failed.";
     }
-    goToRun(data.run);
   }
 
   els.logText.value = bootstrap.sample_text || "";

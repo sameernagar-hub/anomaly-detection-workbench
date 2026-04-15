@@ -20,57 +20,77 @@
   };
 
   async function refresh() {
-    const data = await ui.fetchJSON("/api/live/status");
-    els.liveStatus.textContent = `${data.status?.status || "idle"} | ${data.context?.system || "System not set"} | ${data.status?.path || "No live path"} | ${data.status?.updated_at || "not updated yet"}`;
-    els.replayStatus.textContent = `${data.replay?.state || "idle"} | ${data.replay?.message || "Replay idle."}`;
-    if (data.context?.system) els.liveSystem.value = data.context.system;
-    ui.renderTrendChart(els.trendChart, data.status?.result);
-    const history = (data.status?.history || []).map((item, index) => ({
-      id: `live-${index}`,
-      filename: `${item.line_count || 0} lines`,
-      created_at: item.timestamp,
-      mode: "compare",
-      source: "live",
-      summary: {
-        window_count: item.line_count,
-        deeplog_anomalies: item.deeplog_anomalies,
-        report_anomalies: item.report_anomalies,
-      },
-      detail_url: "#",
-    }));
-    ui.renderRunCards(els.liveHistory, history, "No live updates yet.");
+    try {
+      const data = await ui.fetchJSON("/api/live/status");
+      els.liveStatus.textContent = `${data.status?.status || "idle"} | ${data.context?.system || "System not set"} | ${data.status?.path || "No live path"} | ${data.status?.updated_at || "not updated yet"}`;
+      els.replayStatus.textContent = `${data.replay?.state || "idle"} | ${data.replay?.message || "Replay idle."}`;
+      if (data.context?.system) els.liveSystem.value = data.context.system;
+      ui.renderTrendChart(els.trendChart, data.status?.result);
+      const history = (data.status?.history || []).map((item, index) => ({
+        id: `live-${index}`,
+        filename: `${item.line_count || 0} lines`,
+        created_at: item.timestamp,
+        mode: "compare",
+        source: "live",
+        summary: {
+          window_count: item.line_count,
+          deeplog_anomalies: item.deeplog_anomalies,
+          report_anomalies: item.report_anomalies,
+        },
+        detail_url: "#",
+      }));
+      ui.renderRunCards(els.liveHistory, history, "No live updates yet.");
+    } catch (error) {
+      els.liveStatus.textContent = error.message || "Unable to refresh live status.";
+    }
   }
 
   async function startLive() {
-    const data = await ui.fetchJSON("/api/live/start", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: els.livePath.value, system: els.liveSystem.value }),
-    });
-    els.liveStatus.textContent = `${data.status || data.error} | ${data.path || els.livePath.value}`;
-    refresh();
+    try {
+      const data = await ui.fetchJSON("/api/live/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: els.livePath.value, system: els.liveSystem.value }),
+      });
+      els.liveStatus.textContent = `${data.status || data.error} | ${data.path || els.livePath.value}`;
+      refresh();
+    } catch (error) {
+      els.liveStatus.textContent = error.message || "Unable to start live monitoring.";
+    }
   }
 
   async function stopLive() {
-    await ui.fetchJSON("/api/live/stop", { method: "POST" });
-    refresh();
+    try {
+      await ui.fetchJSON("/api/live/stop", { method: "POST" });
+      refresh();
+    } catch (error) {
+      els.liveStatus.textContent = error.message || "Unable to stop live monitoring.";
+    }
   }
 
   async function startReplay(sampleId) {
-    const data = await ui.fetchJSON("/api/demo/replay/start", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sample_id: sampleId || bootstrap.featured_sample?.id || "executive-brief", system: els.liveSystem.value }),
-    });
-    if (data.target_path) els.livePath.value = data.target_path;
-    els.replayStatus.textContent = `${data.state} | ${data.message}`;
-    refresh();
+    try {
+      const data = await ui.fetchJSON("/api/demo/replay/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sample_id: sampleId || bootstrap.featured_sample?.id || "executive-brief", system: els.liveSystem.value }),
+      });
+      if (data.target_path) els.livePath.value = data.target_path;
+      els.replayStatus.textContent = `${data.state} | ${data.message}`;
+      refresh();
+    } catch (error) {
+      els.replayStatus.textContent = error.message || "Unable to start replay.";
+    }
   }
 
   async function stopReplay() {
-    const data = await ui.fetchJSON("/api/demo/replay/stop", { method: "POST" });
-    els.replayStatus.textContent = `${data.state} | ${data.message}`;
-    refresh();
+    try {
+      const data = await ui.fetchJSON("/api/demo/replay/stop", { method: "POST" });
+      els.replayStatus.textContent = `${data.state} | ${data.message}`;
+      refresh();
+    } catch (error) {
+      els.replayStatus.textContent = error.message || "Unable to stop replay.";
+    }
   }
 
   async function saveLiveSnapshot() {

@@ -56,8 +56,13 @@
   }
 
   async function refresh() {
-    const payload = await ui.fetchJSON("/api/evaluation");
-    render(payload);
+    try {
+      const payload = await ui.fetchJSON("/api/evaluation");
+      render(payload);
+    } catch (error) {
+      els.evaluationHeadline.textContent = "Evaluation snapshot unavailable.";
+      els.evaluationMessage.textContent = error.message || "Unable to refresh evaluation right now.";
+    }
   }
 
   els.refreshEvaluation.addEventListener("click", refresh);
