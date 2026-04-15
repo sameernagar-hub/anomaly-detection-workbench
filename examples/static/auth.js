@@ -38,6 +38,34 @@
     field.addEventListener("input", () => updateStrength(field.value || ""));
   }
 
+  function scribbleThemeConfig(theme) {
+    const configs = {
+      campus: {
+        wash: ["rgba(31, 40, 51, 0.06)", "rgba(35, 75, 109, 0.14)", "rgba(179, 86, 59, 0.1)"],
+        glyphs: ["#2d3f52", "#3f5d76", "#6b4d45", "#56697b", "#314b41"],
+        noise: ["rgba(52, 74, 92, 0.24)", "rgba(179, 86, 59, 0.18)", "rgba(21, 122, 110, 0.18)"],
+        dots: ["rgba(35,75,109,0.16)", "rgba(179,86,59,0.12)", "rgba(31,40,51,0.12)"],
+      },
+      signal: {
+        wash: ["rgba(39, 52, 74, 0.05)", "rgba(74, 54, 112, 0.12)", "rgba(13, 148, 136, 0.1)"],
+        glyphs: ["#384962", "#5a3ca3", "#245f7d", "#7f5340", "#1c645e"],
+        noise: ["rgba(93, 40, 184, 0.18)", "rgba(13, 148, 136, 0.18)", "rgba(56, 73, 98, 0.2)"],
+        dots: ["rgba(93,40,184,0.1)", "rgba(13,148,136,0.12)", "rgba(56,73,98,0.12)"],
+      },
+      midnight: {
+        wash: ["rgba(255,255,255,0.04)", "rgba(138, 180, 255, 0.08)", "rgba(91, 214, 176, 0.08)"],
+        glyphs: ["#a6c4ff", "#8fe2cf", "#ffb08f", "#d8e5ff", "#b7d8c8"],
+        noise: ["rgba(138,180,255,0.18)", "rgba(91,214,176,0.18)", "rgba(255,142,107,0.16)"],
+        dots: ["rgba(138,180,255,0.12)", "rgba(91,214,176,0.1)", "rgba(255,255,255,0.08)"],
+      },
+    };
+    return configs[theme] || configs.campus;
+  }
+
+  function pick(list) {
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
   function drawScribble() {
     const canvas = byId("scribbleCanvas");
     const code = bootstrap.human_payload?.scribble?.code;
@@ -45,13 +73,19 @@
     const ctx = canvas.getContext("2d");
     const width = canvas.width;
     const height = canvas.height;
+    const theme = document.body.dataset.theme || "campus";
+    const config = scribbleThemeConfig(theme);
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = "rgba(255,255,255,0.16)";
+    const background = ctx.createLinearGradient(0, 0, width, height);
+    background.addColorStop(0, pick(config.wash));
+    background.addColorStop(0.5, "rgba(255,255,255,0.02)");
+    background.addColorStop(1, pick(config.wash));
+    ctx.fillStyle = background;
     ctx.fillRect(0, 0, width, height);
 
-    for (let i = 0; i < 12; i += 1) {
-      ctx.strokeStyle = `hsla(${Math.random() * 360}, 78%, 62%, 0.22)`;
-      ctx.lineWidth = 1 + Math.random() * 2;
+    for (let i = 0; i < 16; i += 1) {
+      ctx.strokeStyle = pick(config.noise);
+      ctx.lineWidth = 1 + Math.random() * 2.6;
       ctx.beginPath();
       ctx.moveTo(Math.random() * width, Math.random() * height);
       ctx.bezierCurveTo(
@@ -65,6 +99,15 @@
       ctx.stroke();
     }
 
+    for (let i = 0; i < 8; i += 1) {
+      ctx.strokeStyle = pick(config.noise);
+      ctx.lineWidth = 1.4 + Math.random() * 2.2;
+      ctx.beginPath();
+      ctx.moveTo(10 + Math.random() * (width - 20), 14 + Math.random() * (height - 28));
+      ctx.lineTo(10 + Math.random() * (width - 20), 14 + Math.random() * (height - 28));
+      ctx.stroke();
+    }
+
     ctx.textBaseline = "middle";
     code.split("").forEach((character, index) => {
       const x = 48 + index * 68 + (Math.random() * 12 - 6);
@@ -73,13 +116,15 @@
       ctx.translate(x, y);
       ctx.rotate((Math.random() * 0.7) - 0.35);
       ctx.font = `${54 + Math.floor(Math.random() * 8)}px Segoe UI`;
-      ctx.fillStyle = ["#234b6d", "#157a6e", "#b3563b", "#3a4e61"][index % 4];
+      ctx.shadowBlur = theme === "midnight" ? 0 : 1.5;
+      ctx.shadowColor = pick(config.noise);
+      ctx.fillStyle = config.glyphs[(index + Math.floor(Math.random() * config.glyphs.length)) % config.glyphs.length];
       ctx.fillText(character, 0, 0);
       ctx.restore();
     });
 
-    for (let i = 0; i < 120; i += 1) {
-      ctx.fillStyle = `rgba(35,75,109,${Math.random() * 0.12})`;
+    for (let i = 0; i < 160; i += 1) {
+      ctx.fillStyle = pick(config.dots);
       ctx.beginPath();
       ctx.arc(Math.random() * width, Math.random() * height, Math.random() * 2.4, 0, Math.PI * 2);
       ctx.fill();
@@ -102,6 +147,7 @@
     if (!document.querySelector("[data-human-verify]")) return;
     drawScribble();
     initEmojiSelection();
+    window.addEventListener("adw:theme-change", drawScribble);
   }
 
   function initAutoDisplayName() {

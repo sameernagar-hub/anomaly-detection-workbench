@@ -56,7 +56,7 @@
         <form class="feedback-form" method="post" novalidate>
           <div class="auth-grid">
             <div>
-              <label class="field-label" for="category">Category</label>
+              <label class="field-label" for="category">Category <button class="info-dot" type="button" data-tooltip="Choose whether this is a platform question, an idea, a bug note, or general feedback." aria-label="Explain feedback category">?</button></label>
               <select id="category" name="category">
                 {% for key, label in feedback_categories.items() %}
                   <option value="{{ key }}" {% if form_data.category == key %}selected{% endif %}>{{ label }}</option>
@@ -65,7 +65,7 @@
               {% if form_errors.category %}<div class="field-error">{{ form_errors.category }}</div>{% endif %}
             </div>
             <div>
-              <label class="field-label" for="title">Short title</label>
+              <label class="field-label" for="title">Short title <button class="info-dot" type="button" data-tooltip="Give the feedback a quick label so it is easy to recognize later in your archive." aria-label="Explain feedback title">?</button></label>
               <input type="text" id="title" name="title" value="{{ form_data.title }}" maxlength="120" placeholder="What stood out?">
               {% if form_errors.title %}<div class="field-error">{{ form_errors.title }}</div>{% endif %}
             </div>
@@ -74,7 +74,7 @@
           <div class="feedback-rating-grid">
             {% for field, label in [('overall_rating', 'Overall'), ('usability_rating', 'Usability'), ('visual_rating', 'Visual quality'), ('clarity_rating', 'Result clarity')] %}
               <div class="feedback-rating-card">
-                <strong>{{ label }}</strong>
+                <strong>{{ label }} <button class="info-dot" type="button" data-tooltip="{% if field == 'overall_rating' %}Your broad read on the workbench as a whole.{% elif field == 'usability_rating' %}How easy the flow feels to use without extra explanation.{% elif field == 'visual_rating' %}How strong the layout, theme work, and visual polish feel.{% else %}How clear the analysis results, labels, and explanations feel in practice.{% endif %}" aria-label="Explain {{ label|lower }}">?</button></strong>
                 <div class="rating-chip-row">
                   {% for rating in ['1', '2', '3', '4', '5'] %}
                     <label>
@@ -89,13 +89,13 @@
           </div>
 
           <div>
-            <label class="field-label" for="message">Feedback</label>
+            <label class="field-label" for="message">Feedback <button class="info-dot" type="button" data-tooltip="Describe what worked, what felt rough, or what should change first." aria-label="Explain feedback message">?</button></label>
             <textarea id="message" name="message" placeholder="What felt strong, what felt off, and what should change first?">{{ form_data.message }}</textarea>
             {% if form_errors.message %}<div class="field-error">{{ form_errors.message }}</div>{% endif %}
           </div>
 
           <div>
-            <label class="field-label" for="question">Question about the platform</label>
+            <label class="field-label" for="question">Question about the platform <button class="info-dot" type="button" data-tooltip="Use this if you want to ask for clarification about a feature, workflow, or result surface." aria-label="Explain feedback question">?</button></label>
             <textarea id="question" name="question" placeholder="Ask anything you want answered in the next iteration.">{{ form_data.question }}</textarea>
           </div>
 

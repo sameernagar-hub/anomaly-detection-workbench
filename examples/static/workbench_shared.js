@@ -48,10 +48,12 @@
   }
 
   function setTheme(theme) {
+    const previousTheme = document.body.dataset.theme;
     document.body.dataset.theme = theme;
     const select = document.getElementById("themeSelect");
     if (select) select.value = theme;
     localStorage.setItem("adw-theme", theme);
+    window.dispatchEvent(new CustomEvent("adw:theme-change", { detail: { theme, previousTheme } }));
   }
 
   function initTheme() {

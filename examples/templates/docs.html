@@ -69,6 +69,10 @@
             <strong>4. Remembered access</strong>
             <p>If you opt into Remember this device, the workbench stores device trust for that user so later sign-ins can skip verification until the trust window ends.</p>
           </article>
+          <article class="report-card">
+            <strong>5. Account protection</strong>
+            <p>Repeated failed password attempts trigger progressive temporary lockouts, and resetting a password revokes older trusted-device records.</p>
+          </article>
         </div>
       </section>
 
@@ -85,6 +89,7 @@
           <article class="report-card"><strong>Primary system</strong><p>Your profile can store whether you mainly work on Windows, Linux, or macOS.</p></article>
           <article class="report-card"><strong>Live tracing system preference</strong><p>This default helps the Live Monitoring service prefill the operating-system context for new live sessions.</p></article>
           <article class="report-card"><strong>Preferred analysis mode</strong><p>Controls the default result mode used when you launch a new analysis.</p></article>
+          <article class="report-card"><strong>Preferred theme</strong><p>Changing the header theme updates the active profile preference, so refreshes and later sessions keep the selected visual theme.</p></article>
         </div>
       </section>
 
@@ -100,6 +105,7 @@
           <article class="report-card"><strong>Analysis Service</strong><p>Run anomaly detection on pasted text, uploaded files, or prepared scenarios. New runs inherit your profile-aware defaults where applicable.</p></article>
           <article class="report-card"><strong>Live Monitoring Service</strong><p>Monitor an updating file or replay stream while labeling the traced system as Windows, Linux, or macOS so archived snapshots preserve that context.</p></article>
           <article class="report-card"><strong>Run Archive</strong><p>Saved runs are private to the active account and can carry profile-linked metadata such as public user ID and live-trace context.</p></article>
+          <article class="report-card"><strong>Feedback Service</strong><p>Use the feedback page to store ratings, ideas, bug notes, and platform questions in a user-linked archive that sits beside run history.</p></article>
           <article class="report-card"><strong>Run Details</strong><p>Each saved run opens with a frozen timeline, evidence table, metadata panel, and export actions for later review.</p></article>
           <article class="report-card"><strong>Evaluation Service</strong><p>Use this area for benchmark comparison, not for inspecting one specific operational run.</p></article>
         </div>
@@ -134,6 +140,9 @@
         <div class="docs-stack">
           <article class="report-card"><strong>Why am I asked to complete a human check?</strong><p>The access service uses a local human-verification sequence before opening a secured workspace session.</p></article>
           <article class="report-card"><strong>What does Remember this device do?</strong><p>It creates a trusted-device record for the same user on the same device, which lets later sign-ins skip the human check until that trust expires.</p></article>
+          <article class="report-card"><strong>Why did the human check appear again?</strong><p>The trusted-device window may have expired, a different user may be signing in on the device, or the account password may have been reset.</p></article>
+          <article class="report-card"><strong>Does the theme really save?</strong><p>Yes. Changing the header theme updates the current profile preference so the same theme comes back after refresh and future sign-ins.</p></article>
+          <article class="report-card"><strong>Who can see feedback records?</strong><p>Feedback records are scoped to the signed-in user, just like saved runs and profile-linked workspace history.</p></article>
           <article class="report-card"><strong>What is the public user ID for?</strong><p>It provides a stable account identifier that can follow saved run metadata and live service context.</p></article>
           <article class="report-card"><strong>Why does Live Monitoring ask for a system label?</strong><p>The Windows, Linux, or macOS label preserves operating-system context for live traces and archived snapshots.</p></article>
           <article class="report-card"><strong>Can I change my avatar later?</strong><p>Yes. The Profile service supports avatar upload, replacement, or a return to initials-based presentation.</p></article>
@@ -148,10 +157,12 @@
           </div>
         </div>
         <div class="docs-stack">
-          <article class="report-card"><strong>Access challenge keeps failing</strong><p>Refresh the challenge if the scribble card is unclear or if the active verification window has expired.</p></article>
+          <article class="report-card"><strong>Access challenge keeps failing</strong><p>Refresh the challenge if the scribble card is unclear, change the theme if contrast is fighting your screen, or wait for a fresh verification window if the current one expires.</p></article>
           <article class="report-card"><strong>Avatar is not appearing</strong><p>Use a supported image type such as PNG, JPG, WEBP, or GIF and keep the file within the configured size limit.</p></article>
           <article class="report-card"><strong>No result appears after analysis</strong><p>Check that models have finished bootstrapping and that the input contains enough records to build windows.</p></article>
           <article class="report-card"><strong>Live monitor shows no change</strong><p>Make sure the selected file path exists, the correct system label is selected, and the file is actively receiving new lines.</p></article>
+          <article class="report-card"><strong>Theme does not stick after refresh</strong><p>Make sure you are still signed in when changing the header theme. The update is saved against the active profile.</p></article>
+          <article class="report-card"><strong>Feedback does not appear in history</strong><p>Feedback is shown in the same account-scoped archive area as runs, so sign in with the same user that submitted it.</p></article>
           <article class="report-card"><strong>Evaluation is still pending</strong><p>The benchmark worker may still be running in the background. Refresh the page after a short wait.</p></article>
         </div>
       </section>
