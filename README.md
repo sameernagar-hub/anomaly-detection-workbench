@@ -10,6 +10,16 @@ An interactive anomaly-detection platform for structured log analysis with argum
 
 ---
 
+## Author Spotlight
+
+**Built and led by Sameer Nagar**
+
+This project was designed and developed by **Sameer Nagar** as a graduate computer science project at **California State University, Fullerton (CSUF)**. It brings together anomaly detection research, applied machine learning, secure access design, live monitoring workflows, cross-host evaluation, and a full interactive workbench experience in one system.
+
+The work reflects both the research side and the engineering side of the problem: not just training models, but shaping a usable platform around argument-aware analysis, drift-robust behavior, and practical review workflows for modern log data.
+
+---
+
 ## What This Project Provides
 
 This repository combines a small reusable sequence-model package with a larger Flask workbench. The web app lets a signed-in user:
