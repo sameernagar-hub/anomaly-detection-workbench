@@ -6,7 +6,7 @@
 ![Models](https://img.shields.io/badge/Models-Baseline_%2B_Argument--Aware-234B6D?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-See_LICENSE-B3563B?style=for-the-badge)
 
-An interactive anomaly-detection platform for structured log analysis with argument-aware scoring, drift-aware monitoring, cross-host evaluation, trusted-device access, personalized defaults, live monitoring, user-linked feedback, and archived run review.
+An interactive anomaly-detection platform for structured log analysis with argument-aware scoring, drift-aware monitoring, cross-host evaluation, trusted-device access, personalized defaults, live monitoring, premium report generation, user-linked feedback, and archived run review.
 
 ---
 
@@ -33,8 +33,9 @@ This repository combines a small reusable sequence-model package with a larger F
 - compare a baseline sequence model against an argument-aware model
 - watch a growing file or replay stream through the live monitoring service
 - save account-scoped runs and revisit them later in the run archive
+- generate theme-aware reports with embedded PDF preview using either WeasyPrint or ReportLab
 - submit ratings, questions, ideas, and bug notes through an in-app feedback service with user-linked records
-- export saved runs as JSON, CSV, or HTML
+- export saved runs as JSON, CSV, HTML, or premium renderer-specific PDF
 - manage profile settings, avatar uploads, theme preferences, and default analysis mode
 - inspect benchmark and proxy cross-host evaluation results from a dedicated service page
 
@@ -123,6 +124,7 @@ The root route opens the access flow first. After sign-in and any required human
 | `Analysis Service` | Runs text, upload, and sample analysis | New saved run |
 | `Live Monitoring Service` | Tails a growing file or replay stream with system context | Live-updating inference stream |
 | `Evaluation Service` | Compares baseline and improved models using benchmark metrics | Metrics + cross-host comparison |
+| `Reports Service` | Builds theme-aware premium exports with dual PDF renderers and embedded preview | Inline PDF preview + downloadable report |
 | `FAQ / Docs` | Explains services, metrics, workflows, and troubleshooting | In-app documentation |
 | `Run Archive` | Lists saved runs for the active account | Account-scoped run history |
 | `Feedback Service` | Captures user-linked ratings, questions, bug notes, and suggestions | Saved feedback records |
@@ -190,7 +192,7 @@ anomaly-detection-workbench/
 - `examples/emailer.py`
   SMTP or local-outbox delivery for reset emails.
 - `examples/templates/`
-  Multi-page Jinja templates for auth, buffer, profile, analysis, live monitoring, evaluation, docs, and run history.
+  Multi-page Jinja templates for auth, buffer, profile, analysis, live monitoring, evaluation, reports, docs, and run history.
 - `examples/static/`
   Shared UI behavior, page-specific scripts, and theme styling.
 
@@ -218,6 +220,7 @@ Main user-facing routes:
 - `/analyze`
 - `/live`
 - `/evaluation`
+- `/reports`
 - `/docs`
 - `/history`
 - `/feedback`
@@ -227,6 +230,8 @@ Main API routes:
 
 - `/api/status`
 - `/api/evaluation`
+- `/api/reports/catalog`
+- `/api/reports/download.pdf`
 - `/api/bootstrap/retry`
 - `/api/analyze/text`
 - `/api/analyze/upload`
@@ -242,6 +247,23 @@ Main API routes:
 - `/api/report/export.html`
 
 The app now keeps the main workbench routes gated until the environment finishes warming. If a user reaches the main workbench too early, the app redirects them back to the workspace buffer page.
+
+---
+
+## Reports Service
+
+The Reports service gives the workbench a dedicated export studio:
+
+- choose a saved analysis run, the latest evaluation snapshot, or the current live-monitor result
+- preview the real embedded PDF for the selected renderer before downloading
+- switch between `WeasyPrint Atelier` and `ReportLab Executive`
+- inherit the active workspace theme so exported PDFs follow `campus`, `midnight`, or `signal`
+- keep long evidence values readable by moving oversized raw fields into appendix-style report sections
+
+Renderer notes:
+
+- `WeasyPrint Atelier` uses the HTML-to-PDF path and emphasizes a richer editorial layout
+- `ReportLab Executive` uses a direct vector PDF layout with tighter boardroom-style structure
 
 ---
 
@@ -351,6 +373,8 @@ Common checks:
 - If the live monitor shows no updates, make sure the target file exists, is growing, and the correct system label is selected.
 - If evaluation is still pending, allow the benchmark worker time to finish after bootstrap completes.
 - If remembered access stops skipping verification, the trusted-device window may have expired or the password may have been reset.
+- If a report preview looks blank, confirm the selected report source exists and that the chosen PDF renderer is installed from `requirements.txt`.
+- If long evidence text seems abbreviated in a report table, check the appendix section of the PDF where wrapped raw excerpts are expanded.
 - If inference fails, refresh model artifacts with `python examples/train_models.py`.
 
 ---

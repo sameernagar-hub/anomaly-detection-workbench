@@ -1730,6 +1730,90 @@ code {
   font-weight: 700;
 }
 
+.reports-hero .section-copy {
+  margin-top: 10px;
+  max-width: 760px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.reports-topline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.reports-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.45fr);
+  gap: 18px;
+}
+
+.compact-head {
+  margin-top: 10px;
+}
+
+.renderer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.renderer-card {
+  border: var(--border-width) solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--panel), var(--panel-strong));
+  color: var(--text);
+  padding: 16px;
+  text-align: left;
+  display: grid;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+.renderer-card strong {
+  font-size: 1rem;
+}
+
+.renderer-card span {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.renderer-card:hover,
+.renderer-card:focus-visible,
+.renderer-card.active {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-soft);
+}
+
+.renderer-card.active {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 70%, var(--panel-strong)), var(--panel-strong));
+}
+
+.renderer-card.disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.report-preview-shell {
+  min-height: 980px;
+  border-radius: 24px;
+  overflow: hidden;
+  border: var(--border-width) solid var(--line);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-soft) 76%, var(--panel)), var(--panel-strong));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+.report-preview-shell iframe {
+  width: 100%;
+  min-height: 980px;
+  border: 0;
+  background: #fff;
+}
+
 @media (max-width: 1260px) {
   .header-primary {
     align-items: start;
@@ -1747,13 +1831,15 @@ code {
   .auth-grid,
   .auth-wide-card,
   .profile-hero,
+  .reports-grid,
   .footer-shell {
     grid-template-columns: 1fr;
   }
 
   .metric-ribbon,
   .runway-grid,
-  .eval-topline {
+  .eval-topline,
+  .reports-topline {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1794,7 +1880,9 @@ code {
   .runway-grid,
   .eval-topline,
   .hero-status-grid,
-  .scenario-grid {
+  .scenario-grid,
+  .reports-topline,
+  .renderer-grid {
     grid-template-columns: 1fr;
   }
 

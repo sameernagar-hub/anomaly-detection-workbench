@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Reports | CSUF Anomaly Detection Workbench{% endblock %}
+{% block content %}
+  <section class="glass-card section-card reports-hero">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Reports Service</div>
+        <h1>Premium report generation, preview, and download</h1>
+        <p class="section-copy">
+          Build polished exports for saved analysis runs, benchmark snapshots, and live-monitor sessions without leaving the workspace.
+        </p>
+      </div>
+      <div class="section-actions">
+        <span class="pill-label">Embedded PDF preview</span>
+        <span class="pill-label">Dual PDF renderers</span>
+      </div>
+    </div>
+
+    <div class="reports-topline">
+      <article class="compare-stat accent">
+        <span>Reports available</span>
+        <strong id="reportTypeCount">-</strong>
+        <small>Service report types</small>
+      </article>
+      <article class="compare-stat">
+        <span>Saved runs ready</span>
+        <strong id="reportRunCount">-</strong>
+        <small>Archive-backed sources</small>
+      </article>
+      <article class="compare-stat">
+        <span>Renderer health</span>
+        <strong id="rendererReadyCount">-</strong>
+        <small>PDF engines online</small>
+      </article>
+      <article class="compare-stat">
+        <span>Preview target</span>
+        <strong id="activeReportLabel">Analysis</strong>
+        <small>Current report family</small>
+      </article>
+    </div>
+  </section>
+
+  <section class="reports-grid">
+    <section class="glass-card section-card reports-control-panel">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Composer service</div>
+          <h2>Configure the report</h2>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <div class="filter-group">
+          <label class="field-label" for="reportTypeSelect">Report type</label>
+          <select id="reportTypeSelect"></select>
+        </div>
+        <div class="filter-group">
+          <label class="field-label" for="reportSourceSelect">Source</label>
+          <select id="reportSourceSelect"></select>
+        </div>
+      </div>
+
+      <div class="section-head compact-head">
+        <div>
+          <div class="eyebrow">Renderer service</div>
+          <h2>Choose the PDF engine</h2>
+        </div>
+      </div>
+      <div class="renderer-grid" id="rendererGrid"></div>
+
+      <div class="status-stack">
+        <div class="status-blade" id="reportDescription">Select a report type to see what will be included.</div>
+        <div class="status-blade subtle" id="reportSourceHint">Choose a source and compare the actual embedded PDF output from each renderer before download.</div>
+      </div>
+
+      <div class="control-row wrap">
+        <button class="ghost" id="refreshReportCatalog">Refresh catalog</button>
+        <button class="ghost" id="openPreviewTabBtn">Open preview in tab</button>
+        <button class="primary" id="downloadPdfBtn">Download PDF</button>
+      </div>
+    </section>
+
+    <section class="glass-card section-card reports-preview-panel">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Preview workspace</div>
+          <h2>Embedded PDF preview</h2>
+        </div>
+        <div class="section-actions">
+          <span class="pill-label" id="selectedRendererPill">WeasyPrint</span>
+        </div>
+      </div>
+      <div class="report-preview-shell">
+        <iframe id="reportPreviewFrame" title="Report preview workspace"></iframe>
+      </div>
+    </section>
+  </section>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='reports.js') }}"></script>
+{% endblock %}

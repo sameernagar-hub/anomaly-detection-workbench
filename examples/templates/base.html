@@ -60,6 +60,7 @@
           <a class="nav-link {% if active_page == 'analyze' %}active{% endif %}" href="{{ url_for('analyze_page') }}" data-nav-link>Analysis Service</a>
           <a class="nav-link {% if active_page == 'live' %}active{% endif %}" href="{{ url_for('live_page') }}" data-nav-link>Live Monitor</a>
           <a class="nav-link {% if active_page == 'evaluation' %}active{% endif %}" href="{{ url_for('evaluation_page') }}" data-nav-link>Evaluation Service</a>
+          <a class="nav-link {% if active_page == 'reports' %}active{% endif %}" href="{{ url_for('reports_page') }}" data-nav-link>Reports Service</a>
           <a class="nav-link {% if active_page == 'docs' %}active{% endif %}" href="{{ url_for('docs_page') }}" data-nav-link>FAQ / Docs</a>
           <a class="nav-link {% if active_page == 'history' %}active{% endif %}" href="{{ url_for('history_page') }}" data-nav-link>Run Archive</a>
           <a class="nav-link {% if active_page == 'feedback' %}active{% endif %}" href="{{ url_for('feedback_page') }}" data-nav-link>Feedback</a>
@@ -121,6 +122,7 @@
             <a href="{{ url_for('analyze_page') }}">Analysis Service</a>
             <a href="{{ url_for('live_page') }}">Live Monitor</a>
             <a href="{{ url_for('evaluation_page') }}">Evaluation</a>
+            <a href="{{ url_for('reports_page') }}">Reports</a>
             <a href="{{ url_for('history_page') }}">Run Archive</a>
             <a href="{{ url_for('feedback_page') }}">Feedback</a>
           {% else %}

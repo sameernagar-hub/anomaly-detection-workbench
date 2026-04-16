@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ report.title }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --ink: {{ report.theme.ink }};
+      --muted: {{ report.theme.muted }};
+      --line: {{ report.theme.line }};
+      --line-strong: {{ report.theme.line_strong }};
+      --paper: {{ report.theme.paper }};
+      --paper-alt: {{ report.theme.paper_alt }};
+      --accent: {{ report.theme.accent }};
+      --accent-soft: {{ report.theme.accent_soft }};
+      --accent-alt: {{ report.theme.accent_alt }};
+      --accent-alt-soft: {{ report.theme.accent_alt_soft }};
+      --warn: {{ report.theme.warn }};
+      --hero: {{ report.theme.hero }};
+      --shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: {% if report.renderer == 'weasyprint' %}"Segoe UI", Tahoma, Geneva, Verdana, sans-serif{% else %}"Trebuchet MS", "Segoe UI", sans-serif{% endif %};
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .report-page {
+      width: 100%;
+      padding: 0;
+    }
+    .report-sheet {
+      min-height: 100vh;
+      background: var(--paper);
+    }
+    .cover {
+      padding: {% if report.renderer == 'weasyprint' %}34px 42px 28px{% else %}28px 34px 24px{% endif %};
+      background: var(--hero);
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 11px;
+      color: var(--accent);
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+    h1, h2, h3, p { margin: 0; }
+    .cover-head {
+      display: grid;
+      grid-template-columns: {% if report.renderer == 'weasyprint' %}1.3fr 0.7fr{% else %}1fr{% endif %};
+      gap: 20px;
+      align-items: start;
+    }
+    .cover h1 {
+      font-size: {% if report.renderer == 'weasyprint' %}34px{% else %}30px{% endif %};
+      line-height: 1.05;
+      margin-bottom: 12px;
+      max-width: 760px;
+    }
+    .subtitle {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--muted);
+      max-width: 760px;
+    }
+    .cover-rail {
+      display: {% if report.renderer == 'weasyprint' %}grid{% else %}none{% endif %};
+      gap: 10px;
+      justify-items: end;
+    }
+    .cover-chip,
+    .cover-meta span {
+      display: inline-block;
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.78);
+      color: var(--muted);
+      font-size: 12px;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+    .cover-meta {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .content {
+      padding: {% if report.renderer == 'weasyprint' %}28px 42px 34px{% else %}24px 34px 30px{% endif %};
+      display: grid;
+      gap: 22px;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .hero-card {
+      border: 1px solid var(--line);
+      border-radius: {% if report.renderer == 'weasyprint' %}18px{% else %}12px{% endif %};
+      padding: 16px;
+      background: linear-gradient(180deg, var(--paper), var(--paper-alt));
+    }
+    .hero-card.accent {
+      background: linear-gradient(180deg, var(--accent-alt-soft), var(--paper));
+      border-color: var(--line-strong);
+    }
+    .hero-card.warn {
+      background: linear-gradient(180deg, color-mix(in srgb, var(--warn) 10%, var(--paper)), var(--paper));
+      border-color: var(--line-strong);
+    }
+    .hero-card span,
+    .meta-card span,
+    .fact-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+      text-transform: {% if report.renderer == 'reportlab' %}uppercase{% else %}none{% endif %};
+      letter-spacing: {% if report.renderer == 'reportlab' %}0.08em{% else %}normal{% endif %};
+    }
+    .hero-card strong {
+      display: block;
+      font-size: 26px;
+      line-height: 1.08;
+      margin-bottom: 6px;
+      overflow-wrap: anywhere;
+    }
+    .hero-card small {
+      display: block;
+      color: var(--muted);
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+    .meta-grid,
+    .facts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .meta-card,
+    .fact-card {
+      border: 1px solid var(--line);
+      border-radius: {% if report.renderer == 'weasyprint' %}16px{% else %}10px{% endif %};
+      padding: 13px 14px;
+      background: var(--paper-alt);
+      min-width: 0;
+    }
+    .meta-card strong,
+    .fact-card strong {
+      font-size: 15px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .section {
+      border: 1px solid var(--line);
+      border-radius: {% if report.renderer == 'weasyprint' %}22px{% else %}12px{% endif %};
+      overflow: hidden;
+      background: var(--paper);
+      box-shadow: {% if report.renderer == 'weasyprint' %}var(--shadow){% else %}none{% endif %};
+    }
+    .section-head {
+      padding: 16px 18px 14px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--paper-alt), var(--paper));
+    }
+    .section-head h2 {
+      font-size: 20px;
+      margin-top: 4px;
+    }
+    .section-body {
+      padding: 16px 18px 18px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 12px;
+    }
+    th, td {
+      padding: 10px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    th {
+      background: var(--paper-alt);
+      color: var(--accent);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    tbody tr:nth-child(even) td {
+      background: color-mix(in srgb, var(--paper-alt) 72%, var(--paper));
+    }
+    .message-card {
+      padding: 18px 20px;
+      border-radius: 14px;
+      background: var(--paper-alt);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+    }
+    .footer-note {
+      padding-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+    }
+    @media (max-width: 920px) {
+      .hero-grid,
+      .meta-grid,
+      .facts-grid,
+      .cover-head {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    @media (max-width: 720px) {
+      .hero-grid,
+      .meta-grid,
+      .facts-grid,
+      .cover-head {
+        grid-template-columns: 1fr;
+      }
+      .cover,
+      .content {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+    }
+    @page {
+      size: A4;
+      margin: 0.46in;
+    }
+  </style>
+</head>
+<body>
+  <div class="report-page">
+    <article class="report-sheet">
+      <header class="cover">
+        <div class="cover-head">
+          <div>
+            <div class="eyebrow">{{ report.report_type.replace("_", " ") }} report</div>
+            <h1>{{ report.title }}</h1>
+            <p class="subtitle">{{ report.subtitle }}</p>
+          </div>
+          <div class="cover-rail">
+            <span class="cover-chip">{{ report.renderer.replace("_", " ") }}</span>
+            <span class="cover-chip">{{ report.theme_name }} theme</span>
+          </div>
+        </div>
+        <div class="cover-meta">
+          <span>Generated {{ report.generated_at }}</span>
+          <span>{{ report.source_label }}: {{ report.source_value }}</span>
+          <span>Anomaly Detection Workbench premium export</span>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="hero-grid">
+          {% for metric in report.hero_metrics %}
+            <article class="hero-card {{ metric.tone }}">
+              <span>{{ metric.label }}</span>
+              <strong>{{ metric.value }}</strong>
+              <small>{{ metric.detail }}</small>
+            </article>
+          {% endfor %}
+        </section>
+
+        {% if report.meta %}
+          <section class="section">
+            <div class="section-head">
+              <div class="eyebrow">Report metadata</div>
+              <h2>Execution context and source details</h2>
+            </div>
+            <div class="section-body">
+              <div class="meta-grid">
+                {% for item in report.meta %}
+                  <article class="meta-card">
+                    <span>{{ item.label }}</span>
+                    <strong>{{ item.value }}</strong>
+                  </article>
+                {% endfor %}
+              </div>
+            </div>
+          </section>
+        {% endif %}
+
+        {% for section in report.sections %}
+          <section class="section">
+            <div class="section-head">
+              <div class="eyebrow">{{ section.eyebrow }}</div>
+              <h2>{{ section.title }}</h2>
+            </div>
+            <div class="section-body">
+              {% if section.kind == "facts" %}
+                <div class="facts-grid">
+                  {% for row in section.rows %}
+                    <article class="fact-card">
+                      <span>{{ row.label }}</span>
+                      <strong>{{ row.value }}</strong>
+                    </article>
+                  {% endfor %}
+                </div>
+              {% elif section.kind == "table" %}
+                {% if section.rows %}
+                  <table>
+                    <thead>
+                      <tr>
+                        {% for column in section.columns %}
+                          <th>{{ column }}</th>
+                        {% endfor %}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for row in section.rows %}
+                        <tr>
+                          {% for cell in row.cells %}
+                            <td>{{ cell }}</td>
+                          {% endfor %}
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                {% else %}
+                  <div class="message-card">{{ section.empty_message }}</div>
+                {% endif %}
+              {% else %}
+                <div class="message-card">{{ section.body }}</div>
+              {% endif %}
+            </div>
+          </section>
+        {% endfor %}
+
+        <div class="footer-note">Anomaly Detection Workbench | {{ report.renderer }} | {{ report.theme_name }} theme</div>
+      </div>
+    </article>
+  </div>
+</body>
+</html>

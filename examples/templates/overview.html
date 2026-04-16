@@ -31,6 +31,7 @@
       </div>
       <div class="control-row wrap">
         <a class="primary" href="{{ url_for('analyze_page') }}">Open Analysis</a>
+        <a class="ghost" href="{{ url_for('reports_page') }}">Open Reports</a>
         <a class="ghost" href="{{ url_for('history_page') }}">Open Run Archive</a>
         <a class="ghost" href="{{ url_for('live_page') }}">Open Live Monitoring</a>
       </div>
@@ -147,6 +148,10 @@
           <a class="feature-card" href="{{ url_for('evaluation_page') }}">
             <strong>Evaluation</strong>
             <p>Compare the baseline sequence model and the argument-aware model using benchmark metrics and cross-host proxy results.</p>
+          </a>
+          <a class="feature-card" href="{{ url_for('reports_page') }}">
+            <strong>Reports</strong>
+            <p>Preview polished exports, choose your preferred PDF renderer, and generate presentation-ready reports for analysis, evaluation, or live monitoring.</p>
           </a>
           <a class="feature-card" href="{{ url_for('history_page') }}">
             <strong>Run Archive</strong>

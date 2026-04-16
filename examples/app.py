@@ -22,6 +22,8 @@ if str(BASE_DIR) not in sys.path:
 from auth import auth_bp, current_profile, current_user, login_required
 from db import connect_db, get_db_path, init_db, load_json
 from emailer import Mailer
+from report_renderers import render_pdf, renderer_statuses
+from reports import build_analysis_report, build_evaluation_report, build_live_report, empty_report, report_catalog
 from workbench import DEFAULT_UPLOAD_TEXT, AnomalyWorkbench, LiveMonitor, load_records_from_file, load_records_from_text
 
 
@@ -412,6 +414,42 @@ def _build_benchmark_payload() -> Dict[str, Any]:
     }
 
 
+def _report_renderer_statuses() -> Dict[str, Dict[str, Any]]:
+    return renderer_statuses()
+
+
+def _report_preview_context(user_id: int) -> Dict[str, Any]:
+    live_monitor, _ = _user_services(user_id)
+    return {
+        "runs": _list_runs(user_id),
+        "evaluation_cache": dict(EVALUATION_CACHE),
+        "live_status": live_monitor.status(),
+        "live_context": dict(USER_LIVE_CONTEXT.get(user_id, {})),
+        "renderers": _report_renderer_statuses(),
+    }
+
+
+def _resolve_report_payload(user_id: int, report_type: str, source_id: Optional[str], theme: str, renderer: str) -> Dict[str, Any]:
+    preview_context = _report_preview_context(user_id)
+    if report_type == "analysis":
+        run_id = source_id or (_current_run(user_id) or {}).get("id")
+        if not run_id:
+            return empty_report("analysis", "Analysis Report", "No saved run is available yet. Analyze text, upload a file, or save a live session first.", theme=theme, renderer=renderer)
+        run = _run_by_id(user_id, str(run_id))
+        return build_analysis_report(run, MODEL_NAMES, theme=theme, renderer=renderer)
+    if report_type == "evaluation":
+        ensure_evaluation_started()
+        if EVALUATION_CACHE.get("state") != "ready" or not EVALUATION_CACHE.get("benchmark"):
+            return empty_report("evaluation", "Evaluation Report", EVALUATION_CACHE.get("message", "Evaluation snapshot is still warming up."), theme=theme, renderer=renderer)
+        return build_evaluation_report(dict(EVALUATION_CACHE), MODEL_NAMES, theme=theme, renderer=renderer)
+    if report_type == "live":
+        live_status = preview_context["live_status"]
+        if not live_status.get("result"):
+            return empty_report("live", "Live Monitor Report", "The live monitor does not have a result yet. Start a replay or follow a file to generate a live snapshot.", theme=theme, renderer=renderer)
+        return build_live_report(live_status, preview_context["live_context"], MODEL_NAMES, theme=theme, renderer=renderer)
+    raise ValueError(f"Unsupported report type '{report_type}'.")
+
+
 def _refresh_evaluation_cache() -> None:
     global EVALUATION_THREAD
     try:
@@ -684,6 +722,52 @@ def evaluation_page() -> str:
     return render_template("evaluation.html", active_page="evaluation", bootstrap_data=_user_bootstrap("evaluation"))
 
 
+@app.route("/reports")
+@login_required
+@workbench_ready_required
+def reports_page() -> str:
+    user = current_user()
+    report_type = str(request.args.get("report_type", "analysis")).strip() or "analysis"
+    source_id = str(request.args.get("source_id") or request.args.get("run_id") or "").strip()
+    renderer = str(request.args.get("renderer", "weasyprint")).strip() or "weasyprint"
+    return render_template(
+        "reports.html",
+        active_page="reports",
+        bootstrap_data=_user_bootstrap(
+            "reports",
+            {
+                "report_defaults": {"report_type": report_type, "source_id": source_id, "renderer": renderer},
+                "report_renderers": _report_renderer_statuses(),
+                "report_catalog": report_catalog(**_report_preview_context(int(user["id"]))),
+            },
+        ),
+    )
+
+
+@app.route("/reports/preview")
+@login_required
+@workbench_ready_required
+def reports_preview() -> Response:
+    user = current_user()
+    report_type = str(request.args.get("report_type", "analysis")).strip() or "analysis"
+    source_id = str(request.args.get("source_id") or request.args.get("run_id") or "").strip() or None
+    renderer = str(request.args.get("renderer", "weasyprint")).strip() or "weasyprint"
+    theme = str(request.args.get("theme", (current_profile() or {}).get("preferred_theme", "campus"))).strip() or "campus"
+    renderers = _report_renderer_statuses()
+    if renderer not in renderers:
+        return jsonify({"error": f"Unsupported renderer '{renderer}'."}), 400
+    if not renderers[renderer].get("available"):
+        return jsonify({"error": renderers[renderer].get("detail", "Requested renderer is unavailable.")}), 503
+    try:
+        payload = _resolve_report_payload(int(user["id"]), report_type, source_id, theme, renderer)
+    except Exception as exc:
+        payload = empty_report(report_type, "Report Preview", str(exc), theme=theme, renderer=renderer)
+    html = render_template("report_preview.html", report=payload)
+    pdf_bytes = render_pdf(payload, renderer=renderer, html=html, base_url=str(BASE_DIR))
+    filename = f"{payload.get('filename_stem', 'report')}_{renderer}_preview.pdf"
+    return Response(pdf_bytes, mimetype="application/pdf", headers={"Content-Disposition": f"inline; filename={filename}"})
+
+
 @app.route("/docs")
 @login_required
 @workbench_ready_required
@@ -799,6 +883,35 @@ def api_profile_theme():
 def api_evaluation():
     ensure_evaluation_started()
     return jsonify(EVALUATION_CACHE)
+
+
+@app.route("/api/reports/catalog")
+@login_required
+@workbench_ready_required
+def api_reports_catalog():
+    user = current_user()
+    return jsonify(report_catalog(**_report_preview_context(int(user["id"]))))
+
+
+@app.route("/api/reports/download.pdf")
+@login_required
+@workbench_ready_required
+def api_reports_download_pdf():
+    user = current_user()
+    report_type = str(request.args.get("report_type", "analysis")).strip() or "analysis"
+    source_id = str(request.args.get("source_id") or request.args.get("run_id") or "").strip() or None
+    renderer = str(request.args.get("renderer", "weasyprint")).strip() or "weasyprint"
+    theme = str(request.args.get("theme", (current_profile() or {}).get("preferred_theme", "campus"))).strip() or "campus"
+    renderers = _report_renderer_statuses()
+    if renderer not in renderers:
+        return jsonify({"error": f"Unsupported renderer '{renderer}'."}), 400
+    if not renderers[renderer].get("available"):
+        return jsonify({"error": renderers[renderer].get("detail", "Requested renderer is unavailable.")}), 503
+    payload = _resolve_report_payload(int(user["id"]), report_type, source_id, theme, renderer)
+    html = render_template("report_preview.html", report=payload)
+    pdf_bytes = render_pdf(payload, renderer=renderer, html=html, base_url=str(BASE_DIR))
+    filename = f"{payload.get('filename_stem', 'report')}_{renderer}.pdf"
+    return Response(pdf_bytes, mimetype="application/pdf", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
 @app.route("/api/bootstrap/retry", methods=["POST"])
@@ -1029,8 +1142,10 @@ def api_report_export_csv():
 def api_report_export_html():
     user = current_user()
     run = _selected_run(int(user["id"]), request.args.get("run_id"))
-    payload = workbench.export_report_html(run.get("result") or _empty_result(), title=f"Anomaly Report: {run.get('filename', 'Current Report')}")
-    return Response(payload, mimetype="text/html", headers={"Content-Disposition": f"attachment; filename={_run_filename(run, 'html')}"})
+    theme = (current_profile() or {}).get("preferred_theme", "campus")
+    payload = build_analysis_report(run, MODEL_NAMES, theme=theme, renderer="weasyprint")
+    html = render_template("report_preview.html", report=payload)
+    return Response(html, mimetype="text/html", headers={"Content-Disposition": f"attachment; filename={_run_filename(run, 'html')}"})
 
 
 if __name__ == "__main__":
