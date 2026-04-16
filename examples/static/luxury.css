@@ -1574,6 +1574,10 @@ code {
   backdrop-filter: blur(18px);
 }
 
+.account-panel[hidden] {
+  display: none !important;
+}
+
 .account-panel::before {
   content: "";
   position: absolute;
