@@ -215,7 +215,7 @@ def build_analysis_report(run: Dict[str, Any], model_names: Dict[str, Any], *, t
     return _report_shell(
         report_type="analysis",
         title=f"Analysis Report: {filename}",
-        subtitle="A premium exported view of the saved anomaly-detection run, with drift posture, evidence windows, and print-safe appendix details.",
+        subtitle="An exported view of the saved anomaly-detection run, with drift posture, evidence windows, and print-safe appendix details.",
         source_label="Saved run",
         source_value=run.get("id") or filename,
         filename_stem=f"{stem}_{run.get('mode', 'compare')}",
@@ -268,7 +268,7 @@ def build_evaluation_report(evaluation_cache: Dict[str, Any], model_names: Dict[
     return _report_shell(
         report_type="evaluation",
         title="Evaluation Report",
-        subtitle="A polished benchmark summary comparing the baseline sequence model against the argument-aware model across tracked metrics and proxy host folds.",
+        subtitle="A benchmark summary comparing the baseline sequence model against the argument-aware model across tracked metrics and proxy host folds.",
         source_label="Evaluation snapshot",
         source_value=evaluation_cache.get("updated_at") or "latest",
         filename_stem="evaluation_report",
@@ -375,9 +375,9 @@ def report_catalog(*, runs: Iterable[Dict[str, Any]], evaluation_cache: Dict[str
     live_path = (live_status or {}).get("path") or (live_context or {}).get("sample_id") or "active session"
     return {
         "types": [
-            {"id": "analysis", "label": "Analysis Report", "description": "A rich investigation report with premium evidence tables, wrapped appendix excerpts, and service-level summary blocks.", "sources": analysis_sources, "available": bool(analysis_sources)},
-            {"id": "evaluation", "label": "Evaluation Report", "description": "An executive benchmark dossier with metric deltas, headline wins, and cross-host comparison folds.", "sources": [{"id": "latest", "label": "Latest benchmark snapshot", "detail": evaluation_cache.get("updated_at") or evaluation_cache.get("message", "Pending")}], "available": evaluation_ready},
-            {"id": "live", "label": "Live Monitor Report", "description": "A polished live-operations snapshot with replay history, anomaly posture, and recent evidence windows.", "sources": [{"id": "current", "label": "Current live session", "detail": live_path}], "available": live_ready},
+            {"id": "analysis", "label": "Analysis Report", "description": "An investigation report with evidence tables, wrapped appendix excerpts, and service-level summary blocks.", "sources": analysis_sources, "available": bool(analysis_sources)},
+            {"id": "evaluation", "label": "Evaluation Report", "description": "A benchmark report with metric deltas, headline wins, and cross-host comparison folds.", "sources": [{"id": "latest", "label": "Latest benchmark snapshot", "detail": evaluation_cache.get("updated_at") or evaluation_cache.get("message", "Pending")}], "available": evaluation_ready},
+            {"id": "live", "label": "Live Monitor Report", "description": "A live-operations snapshot with replay history, anomaly posture, and recent evidence windows.", "sources": [{"id": "current", "label": "Current live session", "detail": live_path}], "available": live_ready},
         ],
         "renderers": renderers,
     }

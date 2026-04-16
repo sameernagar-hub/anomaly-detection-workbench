@@ -6,7 +6,7 @@
 ![Models](https://img.shields.io/badge/Models-Baseline_%2B_Argument--Aware-234B6D?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-See_LICENSE-B3563B?style=for-the-badge)
 
-An interactive anomaly-detection platform for structured log analysis with argument-aware scoring, drift-aware monitoring, cross-host evaluation, trusted-device access, personalized defaults, live monitoring, premium report generation, user-linked feedback, and archived run review.
+An interactive anomaly-detection platform for structured log analysis with argument-aware scoring, drift-aware monitoring, cross-host evaluation, trusted-device access, personalized defaults, live monitoring, report generation, user-linked feedback, and archived run review.
 
 ---
 
@@ -35,7 +35,7 @@ This repository combines a small reusable sequence-model package with a larger F
 - save account-scoped runs and revisit them later in the run archive
 - generate theme-aware reports with embedded PDF preview using either WeasyPrint or ReportLab
 - submit ratings, questions, ideas, and bug notes through an in-app feedback service with user-linked records
-- export saved runs as JSON, CSV, HTML, or premium renderer-specific PDF
+- export saved runs as JSON, CSV, HTML, or renderer-specific PDF
 - manage profile settings, avatar uploads, theme preferences, and default analysis mode
 - inspect benchmark and proxy cross-host evaluation results from a dedicated service page
 
@@ -124,7 +124,7 @@ The root route opens the access flow first. After sign-in and any required human
 | `Analysis Service` | Runs text, upload, and sample analysis | New saved run |
 | `Live Monitoring Service` | Tails a growing file or replay stream with system context | Live-updating inference stream |
 | `Evaluation Service` | Compares baseline and improved models using benchmark metrics | Metrics + cross-host comparison |
-| `Reports Service` | Builds theme-aware premium exports with dual PDF renderers and embedded preview | Inline PDF preview + downloadable report |
+| `Reports Service` | Builds theme-aware exports with dual PDF renderers and embedded preview | Inline PDF preview + downloadable report |
 | `FAQ / Docs` | Explains services, metrics, workflows, and troubleshooting | In-app documentation |
 | `Run Archive` | Lists saved runs for the active account | Account-scoped run history |
 | `Feedback Service` | Captures user-linked ratings, questions, bug notes, and suggestions | Saved feedback records |
@@ -252,7 +252,7 @@ The app now keeps the main workbench routes gated until the environment finishes
 
 ## Reports Service
 
-The Reports service gives the workbench a dedicated export studio:
+The Reports service gives the workbench a dedicated report workspace:
 
 - choose a saved analysis run, the latest evaluation snapshot, or the current live-monitor result
 - preview the real embedded PDF for the selected renderer before downloading
@@ -262,8 +262,8 @@ The Reports service gives the workbench a dedicated export studio:
 
 Renderer notes:
 
-- `WeasyPrint Atelier` uses the HTML-to-PDF path and emphasizes a richer editorial layout
-- `ReportLab Executive` uses a direct vector PDF layout with tighter boardroom-style structure
+- `WeasyPrint` uses the HTML-to-PDF path and emphasizes a document-style layout
+- `ReportLab` uses a direct vector PDF layout with a more structured report format
 
 ---
 
@@ -386,7 +386,7 @@ This repository is still best understood as an academic and engineering prototyp
 - production-grade CSRF protection
 - stronger secret and deployment management
 - multi-user deployment packaging
-- richer live-ingestion integrations
+- expanded live-ingestion integrations
 - broader datasets and benchmark pipelines
 
 ---

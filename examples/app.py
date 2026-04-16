@@ -69,7 +69,7 @@ SAMPLE_SCENARIOS = [
         "filename": "executive_brief.log",
         "title": "Executive Brief",
         "eyebrow": "Balanced sample",
-        "description": "A premium walkthrough trace with a clean opening, a reconnaissance burst, and enough volume to light up every chart.",
+        "description": "A walkthrough trace with a clean opening, a reconnaissance burst, and enough volume to populate the main charts clearly.",
         "tags": ["balanced", "demo-ready", "compare"],
         "mood": "Emerald Core",
     },
@@ -103,7 +103,7 @@ SAMPLE_SCENARIOS = [
 ]
 
 workbench = AnomalyWorkbench(BASE_DIR)
-BOOTSTRAP_STATUS: Dict[str, Any] = {"state": "starting", "message": "Warming the anomaly showcase...", "details": {}}
+BOOTSTRAP_STATUS: Dict[str, Any] = {"state": "starting", "message": "Preparing anomaly detection services...", "details": {}}
 EVALUATION_CACHE: Dict[str, Any] = {"state": "idle", "message": "Evaluation snapshot has not run yet.", "updated_at": None, "benchmark": None}
 BOOTSTRAP_LOCK = threading.Lock()
 BOOTSTRAP_THREAD: Optional[threading.Thread] = None

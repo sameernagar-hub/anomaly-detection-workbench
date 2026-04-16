@@ -7,7 +7,7 @@
       <h1>Service guidance for access, personalization, anomaly review, and operational workflows.</h1>
       <p>
         Use this page for platform guidance across account access, profile personalization, live tracing,
-        run review, premium reports, exports, evaluation metrics, and common support questions.
+        run review, reports, exports, evaluation metrics, and common support questions.
       </p>
       <div class="control-row wrap">
         <a class="primary" href="{{ url_for('overview') }}">Back to Overview</a>
@@ -38,7 +38,7 @@
           <div class="status-tile">
             <span>Reports service</span>
             <strong>Exports</strong>
-            <small>Renderer-aware PDF preview, theme-aware output, and polished presentation exports.</small>
+            <small>Renderer-aware PDF preview, theme-aware output, and downloadable reports.</small>
           </div>
           <div class="status-tile">
             <span>Review and support</span>
@@ -132,7 +132,7 @@
           <article class="report-card"><strong>Host group</strong><p>A derived grouping used for proxy cross-host analysis when explicit host identifiers are missing.</p></article>
           <article class="report-card"><strong>Metric wins</strong><p>The number of tracked benchmark metrics where the argument-aware model outperforms the baseline model.</p></article>
           <article class="report-card"><strong>Cross-host delta</strong><p>The difference between average proxy host-group accuracy for the argument-aware model and the baseline model.</p></article>
-          <article class="report-card"><strong>Renderer</strong><p>The PDF generation engine used for the current export. WeasyPrint favors a richer editorial layout, while ReportLab uses a tighter executive document style.</p></article>
+          <article class="report-card"><strong>Renderer</strong><p>The PDF generation engine used for the current export. WeasyPrint uses the HTML-to-PDF path, while ReportLab uses a direct PDF layout path.</p></article>
         </div>
       </section>
     </div>

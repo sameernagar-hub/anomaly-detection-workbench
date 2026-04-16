@@ -6,8 +6,8 @@ from typing import Any, Dict, List
 
 def renderer_statuses() -> Dict[str, Dict[str, Any]]:
     statuses = {
-        "weasyprint": {"label": "WeasyPrint Atelier", "available": False, "detail": "Editorial HTML-to-PDF renderer with rich print styling."},
-        "reportlab": {"label": "ReportLab Executive", "available": False, "detail": "Direct vector PDF renderer with a sharper boardroom layout."},
+        "weasyprint": {"label": "WeasyPrint", "available": False, "detail": "HTML-to-PDF renderer with document-based styling."},
+        "reportlab": {"label": "ReportLab", "available": False, "detail": "Direct PDF renderer with a structured report layout."},
     }
     try:
         import weasyprint  # noqa: F401
