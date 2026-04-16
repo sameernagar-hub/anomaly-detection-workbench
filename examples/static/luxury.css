@@ -1491,29 +1491,7 @@ code {
   background: linear-gradient(180deg, var(--warn), color-mix(in srgb, var(--warn) 45%, white));
 }
 
-.user-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 10px 8px 14px;
-  border-radius: var(--radius-pill);
-  border: var(--border-width) solid var(--line);
-  background: var(--panel-strong);
-  max-width: min(100%, 360px);
-}
-
-.user-pill-copy {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.user-pill-copy span {
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
-.user-pill-copy strong,
+.account-menu-link,
 .report-card,
 .verify-card,
 .profile-id-card,
@@ -1523,12 +1501,180 @@ code {
   overflow-wrap: anywhere;
 }
 
-.user-pill-copy strong {
+.account-menu {
+  position: relative;
+  flex: 0 0 auto;
+  z-index: 30;
+}
+
+.account-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 10px 8px 16px;
+  border-radius: var(--radius-pill);
+  border: var(--border-width) solid var(--line);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-soft) 48%, transparent), transparent 64%),
+    linear-gradient(180deg, var(--panel), var(--panel-strong));
+  color: var(--text);
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+.account-trigger:hover,
+.account-trigger:focus-visible,
+.account-menu.open .account-trigger {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-strong);
+}
+
+.account-trigger-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  text-align: right;
+}
+
+.account-trigger-label {
   display: block;
-  max-width: 230px;
+  max-width: 180px;
+  font-size: 0.98rem;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.account-trigger-meta {
+  color: var(--muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.account-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: min(360px, calc(100vw - 32px));
+  z-index: 40;
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 24px;
+  border: var(--border-width) solid var(--line-strong);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--hero-a) 68%, transparent), transparent 46%),
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 85%, transparent), var(--panel-strong));
+  box-shadow: var(--shadow-strong);
+  backdrop-filter: blur(18px);
+}
+
+.account-panel::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  right: 24px;
+  width: 14px;
+  height: 14px;
+  border-top: var(--border-width) solid var(--line-strong);
+  border-left: var(--border-width) solid var(--line-strong);
+  background: color-mix(in srgb, var(--panel) 92%, var(--hero-a));
+  transform: rotate(45deg);
+}
+
+.account-panel-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.account-panel-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.account-panel-copy strong {
+  font-size: 1.18rem;
+  line-height: 1.2;
+}
+
+.account-panel-copy span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.account-avatar-large {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  flex: 0 0 auto;
+}
+
+.account-meta-card {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: var(--border-width) solid var(--line);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-soft) 55%, transparent), transparent 60%),
+    var(--panel-strong);
+}
+
+.account-meta-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.account-menu-links {
+  display: grid;
+  gap: 10px;
+}
+
+.account-menu-link {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: var(--border-width) solid var(--line);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  color: var(--text);
+  transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.account-menu-link span {
+  font-weight: 700;
+}
+
+.account-menu-link small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.account-menu-link:hover,
+.account-menu-link:focus-visible {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  background: linear-gradient(135deg, var(--accent-soft), color-mix(in srgb, var(--panel) 84%, transparent));
+  box-shadow: var(--shadow-soft);
+}
+
+.account-logout-form {
+  margin: 0;
+}
+
+.account-logout-button {
+  width: 100%;
+  justify-content: center;
 }
 
 .user-avatar {
@@ -1894,13 +2040,26 @@ code {
     padding: 8px;
   }
 
-  .user-pill {
-    max-width: 100%;
+  .account-menu {
+    width: 100%;
   }
 
-  .user-pill-copy strong {
-    max-width: none;
-    white-space: normal;
+  .account-trigger,
+  .account-panel {
+    width: 100%;
+  }
+
+  .account-trigger {
+    justify-content: space-between;
+  }
+
+  .account-panel {
+    position: static;
+    margin-top: 10px;
+  }
+
+  .account-panel::before {
+    display: none;
   }
 
   .otp-row {

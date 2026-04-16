@@ -367,7 +367,7 @@ def empty_report(report_type: str, title: str, message: str, source_label: str =
 
 def report_catalog(*, runs: Iterable[Dict[str, Any]], evaluation_cache: Dict[str, Any], live_status: Dict[str, Any], live_context: Optional[Dict[str, Any]], renderers: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     analysis_sources = [
-        {"id": run.get("id"), "label": run.get("filename", "Saved run"), "detail": f"{run.get('created_at', '-')} | {run.get('source', 'run')} | {run.get('mode', 'compare')}"}
+        {"id": run.get("id"), "label": run.get("display_name") or run.get("filename", "Saved run"), "detail": f"{run.get('created_at', '-')} | {run.get('source', 'run')} | {run.get('mode', 'compare')}"}
         for run in runs
     ]
     evaluation_ready = evaluation_cache.get("state") == "ready" and bool(evaluation_cache.get("benchmark"))

@@ -170,6 +170,52 @@
     });
   }
 
+  function initAccountMenu() {
+    const menu = document.querySelector("[data-account-menu]");
+    if (!menu) return;
+
+    const trigger = menu.querySelector("[data-account-trigger]");
+    const panel = menu.querySelector("[data-account-panel]");
+    if (!trigger || !panel) return;
+
+    function openMenu() {
+      panel.hidden = false;
+      menu.classList.add("open");
+      trigger.setAttribute("aria-expanded", "true");
+    }
+
+    function closeMenu() {
+      panel.hidden = true;
+      menu.classList.remove("open");
+      trigger.setAttribute("aria-expanded", "false");
+    }
+
+    trigger.addEventListener("click", () => {
+      if (panel.hidden) openMenu();
+      else closeMenu();
+    });
+
+    document.addEventListener("click", (event) => {
+      if (menu.contains(event.target)) return;
+      closeMenu();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeMenu();
+        trigger.focus();
+      }
+    });
+
+    menu.querySelectorAll("a, button, input").forEach((element) => {
+      element.addEventListener("focusout", () => {
+        window.setTimeout(() => {
+          if (!menu.contains(document.activeElement)) closeMenu();
+        }, 0);
+      });
+    });
+  }
+
   async function fetchJSON(url, options) {
     const response = await fetch(url, options);
     let payload = {};
@@ -292,9 +338,10 @@
     const summary = result?.summary || {};
     const items = result?.items || [];
     const lastItem = items[items.length - 1];
+    const displayName = meta.display_name || meta.filename || "Current report";
 
     applyRunSummaryToMetrics(summary, els);
-    if (els.currentReportName) els.currentReportName.textContent = meta.filename || "Current report";
+    if (els.currentReportName) els.currentReportName.textContent = displayName;
     if (els.currentReportMode) els.currentReportMode.textContent = humanModeLabel(meta.mode || summary.active_model || "compare");
     if (els.latestBaselineScore) els.latestBaselineScore.textContent = lastItem ? score(lastItem.deeplog_score) : "-";
     if (els.latestBaselineVerdict) els.latestBaselineVerdict.innerHTML = lastItem ? badgeForLabel(lastItem.deeplog_prediction) : "Awaiting prediction";
@@ -354,7 +401,7 @@
     container.innerHTML = runs.map((run) => `
       <article class="report-card">
         <div class="report-card-head">
-          <strong>${run.filename}</strong>
+          <strong>${run.display_name || run.filename}</strong>
           <span class="pill-label">${humanModeLabel(run.mode)}</span>
         </div>
         <div class="muted">${run.created_at || "pending"} | ${run.source}</div>
@@ -454,6 +501,7 @@
     initTheme,
     initPageMotion,
     initTooltips,
+    initAccountMenu,
     renderTrendChart,
     applyRunSummaryToMetrics,
     applyRunDetail,
@@ -468,4 +516,5 @@
   initTheme();
   initPageMotion();
   initTooltips();
+  initAccountMenu();
 })();

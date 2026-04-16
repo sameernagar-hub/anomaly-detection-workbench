@@ -137,6 +137,13 @@ def _scenario_meta(sample_id: str) -> Dict[str, Any]:
     raise KeyError(f"Unknown scenario '{sample_id}'")
 
 
+def _scenario_title_by_filename(filename: str) -> Optional[str]:
+    for scenario in SAMPLE_SCENARIOS:
+        if scenario["filename"] == filename:
+            return str(scenario["title"])
+    return None
+
+
 def demo_catalog() -> List[Dict[str, Any]]:
     return [_scenario_meta(scenario["id"]) for scenario in SAMPLE_SCENARIOS]
 
@@ -194,11 +201,33 @@ def _row_to_run(row: Any) -> Dict[str, Any]:
     }
 
 
+def _display_run_name(run: Optional[Dict[str, Any]]) -> str:
+    if not run:
+        return "No report yet"
+    filename = str(run.get("filename") or "").strip()
+    if not filename:
+        return "No report yet"
+    if run.get("source") == "scenario":
+        metadata = run.get("metadata") or {}
+        sample_id = str(metadata.get("sample_id") or "").strip()
+        if sample_id:
+            try:
+                return str(_scenario_meta(sample_id)["title"])
+            except KeyError:
+                pass
+        scenario_title = _scenario_title_by_filename(filename)
+        if scenario_title:
+            return scenario_title
+        return Path(filename).stem.replace("_", " ").strip().title() or filename
+    return filename
+
+
 def _run_summary(run: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "id": run["id"],
         "source": run["source"],
         "filename": run["filename"],
+        "display_name": _display_run_name(run),
         "created_at": run["created_at"],
         "mode": run["mode"],
         "summary": run.get("summary", {}),

@@ -54,7 +54,7 @@
       slides.push({
         title: "Latest saved run",
         metric: `${summary.window_count || 0} windows`,
-        meta: `${currentRun.filename} | ${ui.humanModeLabel(currentRun.mode)}`,
+        meta: `${currentRun.display_name || currentRun.filename} | ${ui.humanModeLabel(currentRun.mode)}`,
         body: `Baseline flagged ${summary.deeplog_anomalies || 0} anomalies, Apex Insight flagged ${summary.report_anomalies || 0}, and agreement is ${ui.pct(summary.agreement_rate)}.`,
       });
     }

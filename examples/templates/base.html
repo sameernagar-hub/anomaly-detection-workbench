@@ -31,21 +31,58 @@
         </label>
 
         {% if auth_user %}
-          <div class="user-pill">
-            <div class="user-pill-copy">
-              <span>Hi, {{ greeting_name or 'there' }}</span>
-              <strong>{{ auth_user.public_user_id }} | {{ auth_user.email }}</strong>
+          <div class="account-menu" data-account-menu>
+            <button class="account-trigger" type="button" data-account-trigger aria-haspopup="menu" aria-expanded="false" aria-controls="accountMenuPanel">
+              <span class="account-trigger-copy">
+                <span class="account-trigger-label">{{ greeting_name or 'User' }}</span>
+                <span class="account-trigger-meta">Account</span>
+              </span>
+              {% if auth_avatar_url %}
+                <img class="user-avatar-image" src="{{ auth_avatar_url }}" alt="{{ greeting_name or auth_user.email }}">
+              {% else %}
+                <div class="user-avatar">{{ (greeting_name or auth_user.email)[0]|upper }}</div>
+              {% endif %}
+            </button>
+
+            <div class="account-panel" id="accountMenuPanel" data-account-panel hidden>
+              <div class="account-panel-hero">
+                <div class="account-panel-copy">
+                  <div class="eyebrow">Signed in</div>
+                  <strong>{{ greeting_name or auth_user.email }}</strong>
+                  <span>{{ auth_user.email }}</span>
+                </div>
+                {% if auth_avatar_url %}
+                  <img class="user-avatar-image account-avatar-large" src="{{ auth_avatar_url }}" alt="{{ greeting_name or auth_user.email }}">
+                {% else %}
+                  <div class="user-avatar account-avatar-large">{{ (greeting_name or auth_user.email)[0]|upper }}</div>
+                {% endif %}
+              </div>
+
+              <div class="account-meta-card">
+                <span class="account-meta-label">User ID</span>
+                <strong>{{ auth_user.public_user_id }}</strong>
+              </div>
+
+              <div class="account-menu-links" role="menu" aria-label="Account">
+                <a class="account-menu-link" href="{{ url_for('auth.profile_page') }}" role="menuitem">
+                  <span>Profile</span>
+                  <small>Manage identity, avatar, and workspace defaults</small>
+                </a>
+                <a class="account-menu-link" href="{{ url_for('overview') }}" role="menuitem">
+                  <span>Workspace</span>
+                  <small>Return to overview and current workbench status</small>
+                </a>
+                <a class="account-menu-link" href="{{ url_for('feedback_page') }}" role="menuitem">
+                  <span>Feedback</span>
+                  <small>Share questions, ideas, and product feedback</small>
+                </a>
+              </div>
+
+              <form method="post" action="{{ url_for('auth.logout') }}" class="account-logout-form">
+                <button class="ghost compact account-logout-button" type="submit">Log out</button>
+              </form>
             </div>
-            {% if auth_avatar_url %}
-              <img class="user-avatar-image" src="{{ auth_avatar_url }}" alt="Profile avatar">
-            {% else %}
-              <div class="user-avatar">{{ (greeting_name or auth_user.email)[0]|upper }}</div>
-            {% endif %}
           </div>
-          <a class="ghost compact" href="{{ url_for('auth.profile_page') }}">Profile</a>
-          <form method="post" action="{{ url_for('auth.logout') }}">
-            <button class="ghost compact" type="submit">Log out</button>
-          </form>
         {% else %}
           <a class="ghost compact" href="{{ url_for('auth.login') }}">Log in</a>
           <a class="primary compact" href="{{ url_for('auth.signup') }}">Create account</a>
