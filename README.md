@@ -33,11 +33,12 @@ This repository combines a small reusable sequence-model package with a larger F
 - compare a baseline sequence model against an argument-aware model
 - watch a growing file or replay stream through the live monitoring service
 - save account-scoped runs and revisit them later in the run archive
-- generate theme-aware reports with embedded PDF preview using two pure-Python PDF approaches: `Studio Canvas` and `Executive Brief`
+- generate theme-aware reports with embedded PDF preview using two dedicated PDF renderers: `Studio Canvas` and `Executive Brief`
 - submit ratings, questions, ideas, and bug notes through an in-app feedback service with user-linked records
 - export saved runs as JSON, CSV, HTML, or renderer-specific PDF
 - manage profile settings, avatar uploads, theme preferences, and default analysis mode
 - inspect benchmark and proxy cross-host evaluation results from a dedicated service page
+- turn archived analytics into personalized suggestions, practical next actions, prevention ideas, and watch-next guidance on the Run Details page
 
 ---
 
@@ -128,7 +129,7 @@ The root route opens the access flow first. After sign-in and any required human
 | `FAQ / Docs` | Explains services, metrics, workflows, and troubleshooting | In-app documentation |
 | `Run Archive` | Lists saved runs for the active account | Account-scoped run history |
 | `Feedback Service` | Captures user-linked ratings, questions, bug notes, and suggestions | Saved feedback records |
-| `Run Details` | Opens one archived run | Frozen charts, evidence table, exports, guided recommendations |
+| `Run Details` | Opens one archived run | Frozen charts, visual recommendation summary, evidence table, exports, personalized recommendations |
 | `Profile Service` | Manages account identity, avatar, and defaults | Personalized settings |
 
 ---
@@ -264,15 +265,15 @@ The Reports service gives the workbench a dedicated report workspace:
 Renderer notes:
 
 - `Studio Canvas`
-  A pure-Python editorial PDF with a presentation-first layout, richer cover treatment, and a more narrative visual flow.
+  A WeasyPrint-based PDF with a full-page layout, structured sections, and browser-based styling.
 - `Executive Brief`
-  A pure-Python boardroom-style PDF with structured briefing blocks, compact metric framing, and executive review emphasis.
+  A ReportLab-based PDF with compact sections, table-focused formatting, and print-oriented structure.
 
 ---
 
 ## Run Details Guidance
 
-The Run Details page is more than a frozen archive view. It now includes a guided-response sidebar that helps translate saved analytics into action:
+The Run Details page is more than a frozen archive view. It now includes a guided-response layer that helps translate saved analytics into action:
 
 - explain what the current anomaly pattern means in user-facing language
 - highlight the highest-priority interpretation signals
@@ -281,6 +282,8 @@ The Run Details page is more than a frozen archive view. It now includes a guide
 - identify what to watch in future runs or live sessions
 
 The guidance is derived from saved anomaly counts, drift posture, model agreement, host concentration, repeated event signatures, labeled-window metrics, and archived metadata.
+
+This guided layer is a major analytics outcome in the workbench. The platform is designed to move beyond raw detection counts by translating a saved run into personalized suggestions and recommendations so the analyst can quickly understand what the result likely means, what to do next, what to prevent, and what to monitor in future runs.
 
 ---
 

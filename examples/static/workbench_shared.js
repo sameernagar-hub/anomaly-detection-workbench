@@ -380,10 +380,10 @@
       return;
     }
     els.resultsBody.innerHTML = visible.slice(0, 120).map((item) => `
-      <tr>
+      <tr class="${Number(item.deeplog_prediction) === 1 || Number(item.report_prediction) === 1 ? "is-anomaly-row" : ""}">
         <td>${item.line_number}</td>
         <td>${item.host_group || "unknown"}</td>
-        <td><code>${item.event}</code><div class="muted">${item.raw || ""}</div></td>
+        <td><code>${item.event}</code><div class="muted evidence-raw">${item.raw || ""}</div></td>
         <td>${badgeForLabel(item.deeplog_prediction)}<div class="muted">score ${score(item.deeplog_score)}</div></td>
         <td>${badgeForLabel(item.report_prediction)}<div class="muted">score ${score(item.report_score)}</div></td>
         <td>${agreementBadge(item.agreement)}</td>
@@ -446,7 +446,6 @@
         <div>
           <div class="eyebrow">${sample.eyebrow}</div>
           <h3>${sample.title}</h3>
-          <div class="mood">${sample.mood}</div>
         </div>
         <p>${sample.description}</p>
         <div class="tag-list">${sample.tags.map((tag) => `<span>${tag}</span>`).join("")}</div>

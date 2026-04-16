@@ -72,7 +72,6 @@ SAMPLE_SCENARIOS = [
         "eyebrow": "Balanced sample",
         "description": "A walkthrough trace with a clean opening, a reconnaissance burst, and enough volume to populate the main charts clearly.",
         "tags": ["balanced", "demo-ready", "compare"],
-        "mood": "Emerald Core",
     },
     {
         "id": "recon-surge",
@@ -81,25 +80,22 @@ SAMPLE_SCENARIOS = [
         "eyebrow": "Attack-heavy sample",
         "description": "A louder stream with repeated reconnaissance-style spikes that makes the improved model story easy to visualize.",
         "tags": ["attack", "high-signal", "live-demo"],
-        "mood": "Gold Pulse",
     },
     {
         "id": "night-shift",
         "filename": "night_shift.log",
         "title": "Night Shift Drift",
         "eyebrow": "Drift scenario",
-        "description": "Starts quiet, shifts protocol mix, and ends with enough variance to trigger drift and adaptive-threshold storytelling.",
+        "description": "Starts quiet, shifts protocol mix, and ends with enough variance to show drift and adaptive-threshold behavior.",
         "tags": ["drift", "adaptive", "timeline"],
-        "mood": "Graphite Tide",
     },
     {
         "id": "disagreement-lab",
         "filename": "disagreement_lab.log",
         "title": "Disagreement Lab",
-        "eyebrow": "Model showdown",
-        "description": "A curated sequence meant to spotlight disagreement windows, mixed labels, and metric deltas between the two models.",
-        "tags": ["disagreement", "benchmark", "storytelling"],
-        "mood": "Copper Signal",
+        "eyebrow": "Model comparison",
+        "description": "A curated sequence that highlights disagreement windows, mixed labels, and metric deltas between the two models.",
+        "tags": ["disagreement", "benchmark", "comparison"],
     },
 ]
 
@@ -424,7 +420,7 @@ def _build_run_recommendations(run: Dict[str, Any]) -> Dict[str, Any]:
                 "meaning": f"Apex Insight accuracy is {_score_text(report_accuracy)} versus {_score_text(baseline_accuracy)} for the baseline on labeled windows.",
                 "actions": [
                     "When reviewing this run, give extra attention to windows that only the improved model flags.",
-                    "Use the improved-model evidence as the primary explanation path in your report/export narrative.",
+                    "Use the improved-model evidence as the primary explanation path in your report or export summary.",
                     "If the baseline underperforms repeatedly on similar runs, treat that as a reason to rely less on single-sequence-only interpretation.",
                 ],
                 "signals": [

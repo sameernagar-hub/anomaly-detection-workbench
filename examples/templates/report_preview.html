@@ -299,7 +299,7 @@
             <p class="subtitle">{{ report.subtitle }}</p>
           </div>
           <div class="cover-rail">
-            <span class="cover-chip">{{ report.renderer.replace("_", " ") }}</span>
+            <span class="cover-chip">{{ report.renderer_label }}</span>
             <span class="cover-chip">{{ report.theme_name }} theme</span>
           </div>
         </div>
@@ -386,7 +386,7 @@
           </section>
         {% endfor %}
 
-        <div class="footer-note">Anomaly Detection Workbench | {{ report.renderer }} | {{ report.theme_name }} theme</div>
+        <div class="footer-note">Anomaly Detection Workbench | {{ report.renderer_label }} | {{ report.theme_name }} theme</div>
       </div>
     </article>
   </div>

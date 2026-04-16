@@ -38,7 +38,7 @@
           <div class="status-tile">
             <span>Reports service</span>
             <strong>Exports</strong>
-            <small>Theme-aware PDF preview, dual pure-Python renderers, and downloadable reports.</small>
+            <small>Theme-aware PDF preview, dual dedicated PDF renderers, and downloadable reports.</small>
           </div>
           <div class="status-tile">
             <span>Review and support</span>
@@ -113,8 +113,23 @@
           <article class="report-card"><strong>Reports Service</strong><p>Preview embedded PDFs, compare the Studio Canvas and Executive Brief report styles, and download theme-aware exports for analysis, evaluation, and live-monitor workflows.</p></article>
           <article class="report-card"><strong>Run Archive</strong><p>Saved runs are private to the active account and can carry profile-linked metadata such as public user ID and live-trace context.</p></article>
           <article class="report-card"><strong>Feedback Service</strong><p>Use the feedback page to store ratings, ideas, bug notes, and platform questions in a user-linked archive that sits beside run history.</p></article>
-          <article class="report-card"><strong>Run Details</strong><p>Each saved run opens with a frozen timeline, evidence table, metadata panel, export actions, and a guided-response sidebar that explains what the analytics mean and what to do next.</p></article>
+          <article class="report-card"><strong>Run Details</strong><p>Each saved run opens with a frozen timeline, evidence table, metadata panel, export actions, and a guided-response layer that explains what the analytics mean and what to do next.</p></article>
           <article class="report-card"><strong>Evaluation Service</strong><p>Use this area for benchmark comparison, not for inspecting one specific operational run.</p></article>
+        </div>
+      </section>
+
+      <section class="glass-card section-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Guided Analytics Outcome</div>
+            <h2>How personalized suggestions work</h2>
+          </div>
+        </div>
+        <div class="docs-stack">
+          <article class="report-card"><strong>Why it exists</strong><p>The workbench does not stop at anomaly counts. Each archived run now generates personalized suggestions so the analytics end in interpretation, investigation direction, prevention ideas, and watch-next signals.</p></article>
+          <article class="report-card"><strong>What powers it</strong><p>The suggestion layer uses anomaly volume, drift posture, model agreement, host concentration, repeated event signatures, label-aligned accuracy, and saved metadata to decide what matters most in that run.</p></article>
+          <article class="report-card"><strong>What you will see</strong><p>The Run Details page turns those analytics into a visual recommendation summary, priority guidance cards, and action tabs for meaning, immediate steps, prevention, and future monitoring.</p></article>
+          <article class="report-card"><strong>How to use it</strong><p>Start with the recommendation summary and priority cards, then move into the timeline and filtered evidence table. Use execution context as supporting provenance, not as the first reading surface.</p></article>
         </div>
       </section>
 
@@ -132,7 +147,7 @@
           <article class="report-card"><strong>Host group</strong><p>A derived grouping used for proxy cross-host analysis when explicit host identifiers are missing.</p></article>
           <article class="report-card"><strong>Metric wins</strong><p>The number of tracked benchmark metrics where the argument-aware model outperforms the baseline model.</p></article>
           <article class="report-card"><strong>Cross-host delta</strong><p>The difference between average proxy host-group accuracy for the argument-aware model and the baseline model.</p></article>
-          <article class="report-card"><strong>Renderer</strong><p>The selected PDF presentation approach for the current export. Studio Canvas and Executive Brief are both pure-Python PDF renderers, but they present the same analytics in different visual styles.</p></article>
+          <article class="report-card"><strong>Renderer</strong><p>The selected PDF presentation approach for the current export. Studio Canvas uses WeasyPrint and Executive Brief uses ReportLab, giving the same analytics two different document layouts.</p></article>
           <article class="report-card"><strong>Guided response</strong><p>The run-details assistant layer that turns anomaly counts, drift posture, model disagreement, host concentration, and event repetition into practical interpretation and next-step guidance.</p></article>
         </div>
       </section>
@@ -155,6 +170,8 @@
           <article class="report-card"><strong>Why do the two report previews look different?</strong><p>The Reports service embeds the real PDF output for each renderer, so Studio Canvas and Executive Brief intentionally keep different layout character while sharing the same report data.</p></article>
           <article class="report-card"><strong>Does the report theme really follow my workspace?</strong><p>Yes. The Reports service uses the active workspace theme when building the current PDF preview and download.</p></article>
           <article class="report-card"><strong>Why does the run details page now show recommendations?</strong><p>The workbench uses the saved analytics in the archived run to generate guided interpretation, practical next actions, prevention ideas, and watch items for future sessions.</p></article>
+          <article class="report-card"><strong>Are the suggestions personalized or generic?</strong><p>They are personalized to the saved run. The guidance changes with the anomaly counts, disagreement level, drift posture, concentrated hosts or events, and the source metadata captured with that specific analysis.</p></article>
+          <article class="report-card"><strong>Should I read execution context first?</strong><p>No. The recommended reading order is guided response first, then timeline and evidence, then execution context for provenance and environment clues.</p></article>
           <article class="report-card"><strong>What is the public user ID for?</strong><p>It provides a stable account identifier that can follow saved run metadata and live service context.</p></article>
           <article class="report-card"><strong>Why does Live Monitoring ask for a system label?</strong><p>The Windows, Linux, or macOS label preserves operating-system context for live traces and archived snapshots.</p></article>
           <article class="report-card"><strong>Can I change my avatar later?</strong><p>Yes. The Profile service supports avatar upload, replacement, or a return to initials-based presentation.</p></article>
@@ -173,7 +190,7 @@
           <article class="report-card"><strong>Avatar is not appearing</strong><p>Use a supported image type such as PNG, JPG, WEBP, or GIF and keep the file within the configured size limit.</p></article>
           <article class="report-card"><strong>No result appears after analysis</strong><p>Check that models have finished bootstrapping and that the input contains enough records to build windows.</p></article>
           <article class="report-card"><strong>Live monitor shows no change</strong><p>Make sure the selected file path exists, the correct system label is selected, and the file is actively receiving new lines.</p></article>
-          <article class="report-card"><strong>Report preview looks blank</strong><p>Make sure the selected report source is available, refresh the report workspace, and confirm the selected pure-Python renderer is installed. The preview is an embedded PDF, not a static HTML mockup.</p></article>
+          <article class="report-card"><strong>Report preview looks blank</strong><p>Make sure the selected report source is available, refresh the report workspace, and confirm the selected renderer is installed. The preview is an embedded PDF, not a static HTML mockup.</p></article>
           <article class="report-card"><strong>Renderer switch does not appear to change</strong><p>The report workspace reloads a fresh embedded PDF when renderer, theme, or source changes. If the frame still looks stale, refresh the page after restarting the app so the latest preview logic is active.</p></article>
           <article class="report-card"><strong>Report table text looks cramped</strong><p>Long evidence values are clipped in the main tables and expanded in appendix sections so the PDF layout stays readable and print-safe.</p></article>
           <article class="report-card"><strong>Theme does not stick after refresh</strong><p>Make sure you are still signed in when changing the header theme. The update is saved against the active profile.</p></article>

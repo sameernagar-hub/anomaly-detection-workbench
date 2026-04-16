@@ -109,7 +109,6 @@
         <div>
           <div class="eyebrow">${sample.eyebrow}</div>
           <h3>${sample.title}</h3>
-          <div class="mood">${sample.mood}</div>
         </div>
         <p>${sample.description}</p>
         <div class="tag-list">${sample.tags.map((tag) => `<span>${tag}</span>`).join("")}</div>

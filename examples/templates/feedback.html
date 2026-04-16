@@ -74,7 +74,7 @@
           <div class="feedback-rating-grid">
             {% for field, label in [('overall_rating', 'Overall'), ('usability_rating', 'Usability'), ('visual_rating', 'Visual quality'), ('clarity_rating', 'Result clarity')] %}
               <div class="feedback-rating-card">
-                <strong>{{ label }} <button class="info-dot" type="button" data-tooltip="{% if field == 'overall_rating' %}Your broad read on the workbench as a whole.{% elif field == 'usability_rating' %}How easy the flow feels to use without extra explanation.{% elif field == 'visual_rating' %}How strong the layout, theme work, and visual polish feel.{% else %}How clear the analysis results, labels, and explanations feel in practice.{% endif %}" aria-label="Explain {{ label|lower }}">?</button></strong>
+                <strong>{{ label }} <button class="info-dot" type="button" data-tooltip="{% if field == 'overall_rating' %}Your overall assessment of the workbench as a whole.{% elif field == 'usability_rating' %}How easy the flow is to use without extra explanation.{% elif field == 'visual_rating' %}How clear and consistent the layout, theme work, and visual presentation feel.{% else %}How clear the analysis results, labels, and explanations feel in practice.{% endif %}" aria-label="Explain {{ label|lower }}">?</button></strong>
                 <div class="rating-chip-row">
                   {% for rating in ['1', '2', '3', '4', '5'] %}
                     <label>

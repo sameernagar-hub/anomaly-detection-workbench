@@ -1,37 +1,64 @@
 from __future__ import annotations
 
 import io
+import re
 from typing import Any, Dict, List
 
 
 def renderer_statuses() -> Dict[str, Dict[str, Any]]:
     statuses = {
-        "weasyprint": {"label": "Studio Canvas", "available": False, "detail": "Pure-Python presentation PDF with a premium editorial layout."},
-        "reportlab": {"label": "Executive Brief", "available": False, "detail": "Pure-Python boardroom PDF with a structured executive briefing layout."},
+        "weasyprint": {"label": "Studio Canvas", "available": False, "detail": "WeasyPrint PDF layout with structured sections and full-page styling."},
+        "reportlab": {"label": "Executive Brief", "available": False, "detail": "ReportLab PDF layout with compact sections and print-focused formatting."},
     }
+    try:
+        import weasyprint  # noqa: F401
+
+        statuses["weasyprint"]["available"] = True
+    except Exception as exc:  # pragma: no cover
+        statuses["weasyprint"]["detail"] = f"Unavailable: {exc}"
     try:
         import reportlab  # noqa: F401
 
         statuses["reportlab"]["available"] = True
-        statuses["weasyprint"]["available"] = True
     except Exception as exc:  # pragma: no cover
-        statuses["weasyprint"]["detail"] = f"Unavailable: {exc}"
         statuses["reportlab"]["detail"] = f"Unavailable: {exc}"
     return statuses
 
 
 def render_pdf(payload: Dict[str, Any], renderer: str, html: str, base_url: str) -> bytes:
     if renderer == "weasyprint":
-        return render_pdf_studio(payload)
+        return render_pdf_studio(payload, html=html, base_url=base_url)
     if renderer == "reportlab":
         return render_pdf_reportlab(payload)
     raise ValueError(f"Unsupported renderer '{renderer}'.")
 
 
+def _wrap_long_token(token: str, width: int = 26) -> str:
+    if len(token) <= width:
+        return token
+    return "<br/>".join(token[index:index + width] for index in range(0, len(token), width))
+
+
+def _reportlab_safe_text(text: Any) -> str:
+    safe = str(text if text is not None else "-")
+    safe = safe.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br/>")
+    parts = re.split(r"(\s+)", safe)
+    wrapped: List[str] = []
+    for part in parts:
+        if not part or part.isspace():
+            wrapped.append(part)
+            continue
+        if len(part) > 34:
+            wrapped.append(_wrap_long_token(part, width=26))
+        else:
+            wrapped.append(part)
+    return "".join(wrapped)
+
+
 def _paragraph(text: Any, style: Any) -> Any:
     from reportlab.platypus import Paragraph
 
-    safe = str(text if text is not None else "-").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br/>")
+    safe = _reportlab_safe_text(text)
     return Paragraph(safe, style)
 
 
@@ -53,243 +80,10 @@ def _column_widths(count: int, total_width: float, focus_index: int | None = Non
     return widths
 
 
-def render_pdf_studio(payload: Dict[str, Any]) -> bytes:
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-    from reportlab.lib.units import inch
-    from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+def render_pdf_studio(payload: Dict[str, Any], html: str, base_url: str) -> bytes:
+    from weasyprint import HTML
 
-    theme = payload.get("theme", {})
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=0.5 * inch, rightMargin=0.5 * inch, topMargin=0.5 * inch, bottomMargin=0.5 * inch)
-    styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name="StudioBadge", parent=styles["BodyText"], fontName="Helvetica-Bold", fontSize=8, leading=10, textColor=colors.HexColor(theme["accent"]), alignment=0))
-    styles.add(ParagraphStyle(name="StudioTitle", parent=styles["Heading1"], fontName="Helvetica-Bold", fontSize=24, leading=28, textColor=colors.HexColor(theme["ink"]), spaceAfter=6))
-    styles.add(ParagraphStyle(name="StudioSubtitle", parent=styles["BodyText"], fontName="Helvetica", fontSize=10.2, leading=13.8, textColor=colors.HexColor(theme["muted"]), spaceAfter=4))
-    styles.add(ParagraphStyle(name="StudioMeta", parent=styles["BodyText"], fontName="Helvetica", fontSize=8.6, leading=11, textColor=colors.HexColor(theme["ink"]), wordWrap="CJK"))
-    styles.add(ParagraphStyle(name="StudioMetricLabel", parent=styles["BodyText"], fontName="Helvetica-Bold", fontSize=8, leading=10, textColor=colors.HexColor(theme["muted"]), wordWrap="CJK"))
-    styles.add(ParagraphStyle(name="StudioMetricValue", parent=styles["BodyText"], fontName="Helvetica-Bold", fontSize=19, leading=22, textColor=colors.HexColor(theme["ink"]), wordWrap="CJK"))
-    styles.add(ParagraphStyle(name="StudioMetricDetail", parent=styles["BodyText"], fontName="Helvetica", fontSize=8.1, leading=10.3, textColor=colors.HexColor(theme["muted"]), wordWrap="CJK"))
-    styles.add(ParagraphStyle(name="StudioSectionEyebrow", parent=styles["BodyText"], fontName="Helvetica-Bold", fontSize=7.6, leading=9.4, textColor=colors.HexColor(theme["accent"]), wordWrap="CJK"))
-    styles.add(ParagraphStyle(name="StudioSectionTitle", parent=styles["Heading3"], fontName="Helvetica-Bold", fontSize=13.4, leading=15.8, textColor=colors.HexColor(theme["ink"]), spaceAfter=3))
-    styles.add(ParagraphStyle(name="StudioSectionIntro", parent=styles["BodyText"], fontName="Helvetica", fontSize=8.5, leading=11, textColor=colors.HexColor(theme["muted"]), wordWrap="CJK"))
-    styles.add(ParagraphStyle(name="StudioTableHead", parent=styles["BodyText"], fontName="Helvetica-Bold", fontSize=7.7, leading=9.4, textColor=colors.HexColor(theme["accent"]), wordWrap="CJK"))
-    styles.add(ParagraphStyle(name="StudioTableBody", parent=styles["BodyText"], fontName="Helvetica", fontSize=7.8, leading=9.6, textColor=colors.HexColor(theme["ink"]), wordWrap="CJK"))
-
-    total_width = A4[0] - doc.leftMargin - doc.rightMargin
-
-    def decorate_page(canvas: Any, pdf_doc: Any) -> None:
-        width, height = A4
-        canvas.saveState()
-        canvas.setFillColor(colors.HexColor(theme["canvas"]))
-        canvas.rect(0, 0, width, height, stroke=0, fill=1)
-
-        canvas.setFillColor(colors.HexColor(theme["canvas_alt"]))
-        canvas.circle(1.15 * inch, height - 1.2 * inch, 0.95 * inch, stroke=0, fill=1)
-        canvas.circle(width - 1.0 * inch, 1.0 * inch, 0.7 * inch, stroke=0, fill=1)
-
-        sheet_x = 0.22 * inch
-        sheet_y = 0.22 * inch
-        sheet_w = width - 0.44 * inch
-        sheet_h = height - 0.44 * inch
-        canvas.setFillColor(colors.HexColor(theme["panel_strong"]))
-        canvas.roundRect(sheet_x, sheet_y, sheet_w, sheet_h, 24, stroke=0, fill=1)
-
-        canvas.setStrokeColor(colors.HexColor(theme["line_strong"]))
-        canvas.setLineWidth(0.9)
-        canvas.roundRect(sheet_x, sheet_y, sheet_w, sheet_h, 24, stroke=1, fill=0)
-
-        canvas.setFillColor(colors.HexColor(theme["accent"]))
-        canvas.roundRect(sheet_x + 14, height - 1.02 * inch, 1.35 * inch, 0.28 * inch, 10, stroke=0, fill=1)
-        canvas.setFont("Helvetica-Bold", 7.5)
-        canvas.setFillColor(colors.white)
-        canvas.drawString(sheet_x + 26, height - 0.93 * inch, "STUDIO PDF")
-
-        canvas.setFont("Helvetica", 8)
-        canvas.setFillColor(colors.HexColor(theme["muted"]))
-        canvas.drawRightString(sheet_x + sheet_w - 18, sheet_y + 16, f"{payload.get('theme_name', 'theme').title()} theme | Page {canvas.getPageNumber()}")
-        canvas.restoreState()
-
-    def metric_tile(metric: Dict[str, Any]) -> Table:
-        tone = metric.get("tone", "default")
-        if tone == "accent":
-            bg = colors.HexColor(theme["accent_alt_soft"])
-        elif tone == "warn":
-            bg = colors.HexColor(theme["accent_soft"])
-        else:
-            bg = colors.HexColor(theme["panel_alt"])
-        tile = Table(
-            [[
-                _paragraph(metric.get("label", ""), styles["StudioMetricLabel"]),
-                _paragraph(metric.get("value", ""), styles["StudioMetricValue"]),
-                _paragraph(metric.get("detail", ""), styles["StudioMetricDetail"]),
-            ]],
-            colWidths=[(total_width - 14) / 2.0],
-        )
-        tile.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, -1), bg),
-                    ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor(theme["line"])),
-                    ("TOPPADDING", (0, 0), (-1, -1), 12),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 12),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 12),
-                ]
-            )
-        )
-        return tile
-
-    def section_block(section: Dict[str, Any], content: Any) -> Table:
-        intro_text = {
-            "facts": "Key values pulled from the saved analytics snapshot.",
-            "table": "Detailed rows preserved from the archived run for deeper inspection.",
-            "message": "Availability and processing status for this report section.",
-        }.get(section.get("kind"), "Saved report content.")
-        block = Table(
-            [
-                [_paragraph(section.get("eyebrow", "").upper(), styles["StudioSectionEyebrow"])],
-                [_paragraph(section.get("title", ""), styles["StudioSectionTitle"])],
-                [_paragraph(intro_text, styles["StudioSectionIntro"])],
-                [content],
-            ],
-            colWidths=[total_width],
-        )
-        block.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(theme["panel"])),
-                    ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor(theme["line"])),
-                    ("TOPPADDING", (0, 0), (-1, -1), 10),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 12),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 12),
-                ]
-            )
-        )
-        return block
-
-    masthead = Table(
-        [[
-            Table(
-                [
-                    [_paragraph(payload.get("report_type", "").replace("_", " ").upper(), styles["StudioBadge"])],
-                    [_paragraph(payload.get("title", "Report"), styles["StudioTitle"])],
-                    [_paragraph(payload.get("subtitle", ""), styles["StudioSubtitle"])],
-                ],
-                colWidths=[total_width * 0.68],
-            ),
-            Table(
-                [
-                    [_paragraph(f"Generated {payload.get('generated_at', '-')}", styles["StudioMeta"])],
-                    [_paragraph(f"{payload.get('source_label', 'Source')}: {payload.get('source_value', '-')}", styles["StudioMeta"])],
-                    [_paragraph("Premium narrative layout for saved workbench analytics.", styles["StudioMeta"])],
-                ],
-                colWidths=[total_width * 0.32],
-            ),
-        ]],
-        colWidths=[total_width * 0.68, total_width * 0.32],
-    )
-    masthead.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(theme["panel"])),
-                ("BOX", (0, 0), (-1, -1), 0.7, colors.HexColor(theme["line_strong"])),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("TOPPADDING", (0, 0), (-1, -1), 14),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 14),
-                ("LEFTPADDING", (0, 0), (-1, -1), 14),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 14),
-            ]
-        )
-    )
-
-    story = [masthead, Spacer(1, 0.18 * inch)]
-
-    metrics = list(payload.get("hero_metrics", []))
-    if metrics:
-        metric_rows = []
-        row = []
-        card_width = (total_width - 14) / 2.0
-        for metric in metrics:
-            row.append(metric_tile(metric))
-            if len(row) == 2:
-                metric_rows.append(row)
-                row = []
-        if row:
-            row.append(Spacer(card_width, 0.01 * inch))
-            metric_rows.append(row)
-        metric_grid = Table(metric_rows, colWidths=[card_width, card_width], hAlign="LEFT")
-        metric_grid.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
-        story.extend([metric_grid, Spacer(1, 0.16 * inch)])
-
-    if payload.get("meta"):
-        meta_rows = _table_data(["Field", "Value"], [{"cells": [item.get("label", ""), item.get("value", "")]} for item in payload.get("meta", [])], styles["StudioTableHead"], styles["StudioTableBody"])
-        meta_table = Table(meta_rows, colWidths=[1.72 * inch, total_width - 1.72 * inch])
-        meta_table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(theme["accent_soft"])),
-                    ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor(theme["line"])),
-                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor(theme["panel_strong"]), colors.HexColor(theme["paper_alt"])]),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 7),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-                    ("TOPPADDING", (0, 0), (-1, -1), 6),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                ]
-            )
-        )
-        story.extend([KeepTogether(section_block({"eyebrow": "Source context", "title": "Report metadata", "kind": "table"}, meta_table)), Spacer(1, 0.14 * inch)])
-
-    for section in payload.get("sections", []):
-        kind = section.get("kind")
-        if kind == "message":
-            content = _paragraph(section.get("body", ""), styles["StudioTableBody"])
-        elif kind == "facts":
-            fact_rows = _table_data(["Field", "Value"], [{"cells": [row.get("label", ""), row.get("value", "")]} for row in section.get("rows", [])], styles["StudioTableHead"], styles["StudioTableBody"])
-            content = Table(fact_rows, colWidths=[2.0 * inch, total_width - 2.0 * inch])
-            content.setStyle(
-                TableStyle(
-                    [
-                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(theme["accent_alt_soft"])),
-                        ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor(theme["line"])),
-                        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor(theme["panel_strong"]), colors.HexColor(theme["paper_alt"])]),
-                        ("LEFTPADDING", (0, 0), (-1, -1), 7),
-                        ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-                        ("TOPPADDING", (0, 0), (-1, -1), 5),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-                    ]
-                )
-            )
-        else:
-            rows = section.get("rows", [])
-            if not rows:
-                content = _paragraph(section.get("empty_message", "No rows available."), styles["StudioTableBody"])
-            else:
-                columns = section.get("columns", [])
-                focus_index = 1 if "Raw excerpt" in columns else 2 if "Event" in columns else None
-                content = Table(_table_data(columns, rows, styles["StudioTableHead"], styles["StudioTableBody"]), colWidths=_column_widths(len(columns), total_width, focus_index=focus_index))
-                content.setStyle(
-                    TableStyle(
-                        [
-                            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(theme["accent_soft"])),
-                            ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor(theme["line"])),
-                            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor(theme["panel_strong"]), colors.HexColor(theme["paper_alt"])]),
-                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                            ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                            ("TOPPADDING", (0, 0), (-1, -1), 4),
-                            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                        ]
-                    )
-                )
-        story.extend([KeepTogether(section_block(section, content)), Spacer(1, 0.14 * inch)])
-
-    story.append(Paragraph("Anomaly Detection Workbench | Studio Canvas PDF | Editorial narrative layout", styles["StudioSubtitle"]))
-    doc.build(story, onFirstPage=decorate_page, onLaterPages=decorate_page)
-    return buffer.getvalue()
+    return HTML(string=html, base_url=base_url).write_pdf()
 
 
 def render_pdf_reportlab(payload: Dict[str, Any]) -> bytes:
@@ -345,7 +139,7 @@ def render_pdf_reportlab(payload: Dict[str, Any]) -> bytes:
 
         canvas.setFont("Helvetica-Bold", 8)
         canvas.setFillColor(colors.HexColor(theme["muted"]))
-        canvas.drawString(sheet_x + 18, sheet_y + 14, f"Anomaly Detection Workbench | {payload.get('renderer', 'reportlab').title()} Executive PDF")
+        canvas.drawString(sheet_x + 18, sheet_y + 14, f"Anomaly Detection Workbench | {payload.get('renderer_label', 'Executive Brief')}")
         canvas.drawRightString(sheet_x + sheet_w - 18, sheet_y + 14, f"Page {canvas.getPageNumber()}")
         canvas.restoreState()
 
@@ -413,7 +207,7 @@ def render_pdf_reportlab(payload: Dict[str, Any]) -> bytes:
             [
                 Table(
                     [
-                        [_paragraph(payload.get("report_type", "").upper() + " DOSSIER", styles["ExecEyebrow"])],
+                        [_paragraph(payload.get("report_type", "").upper() + " REPORT", styles["ExecEyebrow"])],
                         [_paragraph(payload.get("title", "Report"), styles["ExecTitle"])],
                         [_paragraph(payload.get("subtitle", ""), styles["ExecSubtitle"])],
                     ],
@@ -421,7 +215,7 @@ def render_pdf_reportlab(payload: Dict[str, Any]) -> bytes:
                 ),
                 Table(
                     [
-                        [_paragraph("EXECUTIVE PDF", styles["ExecKicker"])],
+                        [_paragraph("PDF EXPORT", styles["ExecKicker"])],
                         [_paragraph(payload.get("generated_at", "-"), styles["ExecBody"])],
                         [_paragraph(f"{payload.get('source_label', 'Source')}: {payload.get('source_value', '-')}", styles["ExecBody"])],
                     ],
@@ -464,11 +258,11 @@ def render_pdf_reportlab(payload: Dict[str, Any]) -> bytes:
             metric_rows.append(row)
         metric_grid = Table(metric_rows, colWidths=[card_width] * 4, hAlign="LEFT")
         metric_grid.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
-        story.extend([section_shell("Executive Signal", "Decision snapshot", metric_grid, "A condensed at-a-glance scorecard for presentation and briefings."), Spacer(1, 0.15 * inch)])
+        story.extend([section_shell("Summary metrics", "Current metrics", metric_grid, "A compact summary of the selected report values."), Spacer(1, 0.15 * inch)])
 
     if payload.get("meta"):
         meta_rows = _table_data(["Field", "Value"], [{"cells": [item.get("label", ""), item.get("value", "")]} for item in payload.get("meta", [])], styles["TableHead"], styles["ExecBody"])
-        meta_table = Table(meta_rows, colWidths=[1.75 * inch, total_width - 1.75 * inch])
+        meta_table = Table(meta_rows, colWidths=[1.45 * inch, total_width - 1.45 * inch])
         meta_table.setStyle(
             TableStyle(
                 [
@@ -492,7 +286,7 @@ def render_pdf_reportlab(payload: Dict[str, Any]) -> bytes:
             summary = "Status message"
         elif kind == "facts":
             fact_rows = [[_paragraph(row.get("label", ""), styles["ExecLabel"]), _paragraph(row.get("value", ""), styles["ExecBody"])] for row in section.get("rows", [])]
-            content = Table(fact_rows, colWidths=[2.05 * inch, total_width - 2.05 * inch])
+            content = Table(fact_rows, colWidths=[1.8 * inch, total_width - 1.8 * inch])
             content.setStyle(
                 TableStyle(
                     [
@@ -506,7 +300,7 @@ def render_pdf_reportlab(payload: Dict[str, Any]) -> bytes:
                     ]
                 )
             )
-            summary = "Structured findings"
+            summary = "Structured values"
         else:
             rows = section.get("rows", [])
             if not rows:
@@ -530,11 +324,11 @@ def render_pdf_reportlab(payload: Dict[str, Any]) -> bytes:
                         ]
                     )
                 )
-                summary = f"{len(rows)} rows arranged for executive review."
+                summary = f"{len(rows)} rows included in this section."
 
-        story.extend([KeepTogether(section_shell(section.get("eyebrow", ""), section.get("title", ""), content, summary)), Spacer(1, 0.14 * inch)])
+        story.extend([section_shell(section.get("eyebrow", ""), section.get("title", ""), content, summary), Spacer(1, 0.14 * inch)])
 
     story.append(Spacer(1, 0.06 * inch))
-    story.append(Paragraph("Anomaly Detection Workbench | ReportLab Executive PDF | Compact briefing layout", styles["ExecSubtitle"]))
+    story.append(Paragraph("Anomaly Detection Workbench | Executive Brief PDF | Compact report layout", styles["ExecSubtitle"]))
     doc.build(story, onFirstPage=decorate_page, onLaterPages=decorate_page)
     return buffer.getvalue()

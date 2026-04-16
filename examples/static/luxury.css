@@ -772,11 +772,6 @@ textarea {
   font-size: 1.35rem;
 }
 
-.scenario-card .mood {
-  font-size: 0.84rem;
-  color: var(--accent-alt);
-}
-
 .studio-grid {
   grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.72fr);
 }
@@ -1243,6 +1238,10 @@ code {
   gap: 14px;
 }
 
+.advisory-section-main {
+  gap: 18px;
+}
+
 .advisory-hero {
   display: grid;
   gap: 10px;
@@ -1253,6 +1252,137 @@ code {
     linear-gradient(135deg, var(--accent-soft), transparent 62%),
     linear-gradient(180deg, var(--panel), var(--panel-strong));
   box-shadow: var(--shadow-soft);
+}
+
+.advisory-hero-grid {
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.advisory-hero-copy,
+.advisory-hero-visual,
+.advisory-dial-shell,
+.advisory-hero-bars {
+  display: grid;
+  gap: 12px;
+}
+
+.advisory-hero-copy {
+  align-content: start;
+}
+
+.advisory-hero-visual {
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  align-items: center;
+}
+
+.advisory-dial-shell {
+  position: relative;
+  place-items: center;
+  min-height: 220px;
+}
+
+.advisory-dial-shell svg {
+  width: min(100%, 220px);
+  height: auto;
+}
+
+.advisory-dial-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 4px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.advisory-dial-center span,
+.context-chip-card span,
+.context-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.advisory-dial-center strong {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.advisory-dial-center small {
+  color: var(--muted);
+}
+
+.advisory-icon-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.context-chip {
+  border-radius: var(--radius-pill);
+  border: var(--border-width) solid var(--line);
+  background: var(--panel-strong);
+  padding: 9px 12px;
+  color: var(--text);
+  font-size: 0.84rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.advisory-bar-card,
+.context-summary-card,
+.context-chip-card {
+  border-radius: var(--radius-lg);
+  border: var(--border-width) solid var(--line);
+  background: linear-gradient(180deg, var(--panel), var(--panel-strong));
+  box-shadow: var(--shadow-soft);
+}
+
+.advisory-bar-card {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.advisory-bar-card.accent {
+  border-color: color-mix(in srgb, var(--accent-alt) 28%, var(--line-strong));
+}
+
+.advisory-bar-card.warn {
+  border-color: color-mix(in srgb, var(--warn) 40%, var(--line-strong));
+}
+
+.advisory-bar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.advisory-bar-head span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.advisory-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-strong) 82%, var(--line));
+  overflow: hidden;
+}
+
+.advisory-bar-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt));
+}
+
+.advisory-bar-card.warn .advisory-bar-track span {
+  background: linear-gradient(90deg, var(--warn), color-mix(in srgb, var(--warn) 58%, white));
 }
 
 .advisory-card {
@@ -1277,8 +1407,33 @@ code {
 }
 
 .advisory-card-top {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.advisory-card-heading {
   display: grid;
   gap: 8px;
+}
+
+.advisory-card-glyph {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent-soft) 72%, var(--panel-strong));
+}
+
+.advisory-card.priority-high .advisory-card-glyph {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn-soft) 78%, var(--panel-strong));
 }
 
 .advisory-card-top strong,
@@ -1318,6 +1473,32 @@ code {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.context-summary-card {
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.context-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.context-chip-card {
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.context-report-card {
+  display: grid;
+  gap: 8px;
+}
+
+.context-report-card strong {
+  overflow-wrap: anywhere;
+}
+
 .advisory-panels {
   gap: 0;
 }
@@ -1346,6 +1527,15 @@ code {
 
 .advisory-list li::marker {
   color: var(--accent);
+}
+
+.evidence-raw {
+  margin-top: 8px;
+  max-width: 52ch;
+}
+
+tbody tr.is-anomaly-row {
+  background: color-mix(in srgb, var(--warn-soft) 22%, var(--panel-strong));
 }
 
 .docs-stack {
@@ -2116,6 +2306,11 @@ code {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .advisory-hero-grid,
+  .advisory-hero-visual {
+    grid-template-columns: 1fr;
+  }
+
   .footer-links {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2155,7 +2350,9 @@ code {
   .hero-status-grid,
   .scenario-grid,
   .reports-topline,
-  .renderer-grid {
+  .renderer-grid,
+  .context-chip-grid,
+  .advisory-tabs {
     grid-template-columns: 1fr;
   }
 
@@ -2195,6 +2392,20 @@ code {
 
   .password-shell {
     grid-template-columns: 1fr;
+  }
+
+  .advisory-card-top,
+  .advisory-bar-head {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .advisory-dial-shell {
+    min-height: 190px;
+  }
+
+  table {
+    min-width: 640px;
   }
 
   .emoji-grid {

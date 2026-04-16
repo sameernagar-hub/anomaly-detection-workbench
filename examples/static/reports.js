@@ -104,9 +104,10 @@
   function refreshPreview() {
     const type = selectedType();
     const rendererLabel = (state.catalog.renderers || {})[state.renderer]?.label || state.renderer;
+    const sourceLabel = els.reportSourceSelect.options[els.reportSourceSelect.selectedIndex]?.text || "selected source";
     state.previewNonce = Date.now();
     els.reportDescription.textContent = type?.description || "Select a report configuration to preview the generated report.";
-    els.reportSourceHint.textContent = `${rendererLabel} preview is embedded below as a real PDF and will follow the active workspace theme.`;
+    els.reportSourceHint.textContent = `${rendererLabel} is rendering a live PDF preview for ${sourceLabel} and will follow the active workspace theme.`;
     els.reportPreviewFrame.src = "about:blank";
     window.requestAnimationFrame(() => {
       els.reportPreviewFrame.src = previewUrl();

@@ -68,6 +68,11 @@ THEME_TOKENS = {
     },
 }
 
+RENDERER_LABELS = {
+    "weasyprint": "Studio Canvas",
+    "reportlab": "Executive Brief",
+}
+
 
 def _now_text() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -210,6 +215,7 @@ def _report_shell(
         "theme_name": theme,
         "theme": report_theme(theme),
         "renderer": renderer,
+        "renderer_label": RENDERER_LABELS.get(renderer, str(renderer).replace("_", " ").title()),
         "hero_metrics": list(hero_metrics),
         "meta": list(meta),
         "sections": list(sections),
