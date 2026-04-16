@@ -6,6 +6,7 @@ import secrets
 import threading
 import time
 import uuid
+from collections import Counter
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
@@ -233,6 +234,271 @@ def _run_summary(run: Dict[str, Any]) -> Dict[str, Any]:
         "summary": run.get("summary", {}),
         "metadata": run.get("metadata", {}),
         "detail_url": url_for("run_detail", run_id=run["id"]),
+    }
+
+
+def _pct_text(value: Any) -> str:
+    try:
+        return f"{round(float(value) * 100)}%"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _score_text(value: Any, digits: int = 3) -> str:
+    try:
+        return f"{float(value):.{digits}f}"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _ranked_counts(items: List[Dict[str, Any]], key: str, *, limit: int = 3, anomaly_only: bool = False) -> List[Tuple[str, int]]:
+    counter: Counter[str] = Counter()
+    for item in items:
+        if anomaly_only and not (int(item.get("deeplog_prediction") or 0) == 1 or int(item.get("report_prediction") or 0) == 1):
+            continue
+        value = str(item.get(key) or "unknown").strip() or "unknown"
+        counter[value] += 1
+    return counter.most_common(limit)
+
+
+def _build_run_recommendations(run: Dict[str, Any]) -> Dict[str, Any]:
+    summary = dict(run.get("summary") or {})
+    result = dict(run.get("result") or {})
+    metadata = dict(run.get("metadata") or {})
+    items = list(result.get("items") or [])
+    window_count = int(summary.get("window_count") or 0)
+    report_anomalies = int(summary.get("report_anomalies") or 0)
+    baseline_anomalies = int(summary.get("deeplog_anomalies") or 0)
+    agreement_rate = float(summary.get("agreement_rate") or 0.0)
+    disagreement_rate = max(0.0, 1.0 - agreement_rate)
+    anomaly_rate = (report_anomalies / window_count) if window_count else 0.0
+    drift = dict(summary.get("drift") or {})
+    drift_status = str(drift.get("status") or "n/a")
+    report_accuracy = summary.get("report_vs_label_accuracy")
+    baseline_accuracy = summary.get("deep_vs_label_accuracy")
+    labeled_windows = int(summary.get("labeled_windows") or 0)
+
+    anomaly_hosts = _ranked_counts(items, "host_group", anomaly_only=True)
+    anomaly_events = _ranked_counts(items, "event", anomaly_only=True)
+    attack_categories = _ranked_counts(items, "attack_cat", anomaly_only=True)
+
+    top_host, top_host_count = anomaly_hosts[0] if anomaly_hosts else ("none", 0)
+    top_event, top_event_count = anomaly_events[0] if anomaly_events else ("none", 0)
+    host_share = (top_host_count / report_anomalies) if report_anomalies else 0.0
+    event_share = (top_event_count / report_anomalies) if report_anomalies else 0.0
+
+    display_name = str(run.get("display_name") or run.get("filename") or "this run")
+    source = str(run.get("source") or "run")
+
+    priorities: List[Dict[str, Any]] = []
+    immediate_actions: List[str] = []
+    prevention_actions: List[str] = []
+    watch_items: List[str] = []
+    meaning_points: List[str] = []
+
+    if report_anomalies == 0 and baseline_anomalies == 0:
+        meaning_points.append(
+            f"{display_name} looks operationally calm: neither model is surfacing a meaningful anomaly cluster in the saved window set."
+        )
+        immediate_actions.append("Keep this run as a clean baseline reference and compare future suspicious uploads or live sessions against it.")
+        prevention_actions.append("Preserve the same source formatting and collection path so future drift checks have a stable comparison point.")
+        watch_items.append("If later runs show anomalies on the same source, compare host groups and event tokens first to isolate what changed.")
+    else:
+        meaning_points.append(
+            f"{display_name} contains {report_anomalies} Apex Insight anomaly calls across {window_count} windows, which is {_pct_text(anomaly_rate)} of the saved timeline."
+        )
+
+    if anomaly_rate >= 0.35 or report_anomalies >= 12:
+        priorities.append(
+            {
+                "priority": "High",
+                "title": "Anomaly volume is elevated",
+                "summary": "This run is showing a broad anomaly footprint rather than an isolated outlier.",
+                "meaning": f"Apex Insight is flagging {_pct_text(anomaly_rate)} of the run. That usually means either a sustained suspicious pattern, a changed environment, or a noisy ingestion source.",
+                "actions": [
+                    "Filter the evidence table to `Any anomaly` and inspect the first concentrated burst rather than reading the run top to bottom.",
+                    "Check whether the flagged windows cluster around one host group, one event token, or one short time span.",
+                    "If this source is expected to be stable, treat this as an operational incident until proven otherwise.",
+                ],
+                "signals": [
+                    f"Apex anomalies: {report_anomalies}",
+                    f"Baseline anomalies: {baseline_anomalies}",
+                    f"Anomaly share: {_pct_text(anomaly_rate)}",
+                ],
+            }
+        )
+        immediate_actions.append("Treat the run as a cluster problem, not a single-row problem: start with concentrated hosts/events, then validate whether the pattern is expected.")
+        watch_items.append("Monitor whether the anomaly share keeps rising in later runs or live monitoring sessions.")
+
+    if drift_status in {"watch", "drifting"}:
+        priorities.append(
+            {
+                "priority": "High" if drift_status == "drifting" else "Medium",
+                "title": "Behavior shifted during the run",
+                "summary": "The run is not just anomalous; its recent behavior moved away from the earlier portion of the same stream.",
+                "meaning": f"Drift posture is `{drift_status}` with score shift {_score_text(drift.get('score_shift'))}, anomaly-rate shift {_score_text(drift.get('anomaly_rate_shift'))}, and protocol shift {_score_text(drift.get('protocol_shift'))}.",
+                "actions": [
+                    "Compare the earlier and later halves of the timeline to find the exact point where score behavior changed.",
+                    "Check whether protocol mix, service mix, or log source conditions changed around that point.",
+                    "If the environment was intentionally changed, capture that as context so future runs do not look unexplained.",
+                ],
+                "signals": [
+                    f"Drift posture: {drift_status}",
+                    f"Score shift: {_score_text(drift.get('score_shift'))}",
+                    f"Protocol shift: {_score_text(drift.get('protocol_shift'))}",
+                ],
+            }
+        )
+        meaning_points.append("The analytics suggest the run changed character midstream, so the important question is what changed and when, not only how many anomalies were produced.")
+        immediate_actions.append("Use the saved timeline to locate the transition point where scores begin to lift, then inspect nearby evidence rows for the first repeated changed pattern.")
+        prevention_actions.append("Record deployment changes, traffic shifts, or parser changes near the drift point so future anomaly runs can be interpreted faster.")
+
+    if disagreement_rate >= 0.22:
+        priorities.append(
+            {
+                "priority": "Medium",
+                "title": "The two models disagree often",
+                "summary": "This run needs analyst review because the baseline and improved model are not telling the same story.",
+                "meaning": f"Agreement is only {_pct_text(agreement_rate)}, so disagreement windows are likely where the strongest analyst signal lives.",
+                "actions": [
+                    "Filter the evidence table to `Disagreements only` and review which event types are being split between the models.",
+                    "Use disagreement windows to identify whether the baseline is missing structured context or the improved model is being more sensitive than expected.",
+                    "If one model consistently flags a host/event family the other ignores, treat that pattern as a review lane of its own.",
+                ],
+                "signals": [
+                    f"Agreement: {_pct_text(agreement_rate)}",
+                    f"Disagreement share: {_pct_text(disagreement_rate)}",
+                ],
+            }
+        )
+        meaning_points.append("Model disagreement usually means the run contains borderline or context-sensitive behavior, which is exactly where human review adds the most value.")
+        watch_items.append("Watch whether future runs show the same disagreement family. Repeated disagreement on the same token/host usually means the source deserves targeted tuning.")
+
+    if host_share >= 0.45 and top_host != "none":
+        priorities.append(
+            {
+                "priority": "High",
+                "title": "Anomalies are concentrated in one host group",
+                "summary": "The issue may be localized rather than system-wide.",
+                "meaning": f"The leading host group `{top_host}` accounts for {_pct_text(host_share)} of anomaly windows, which strongly suggests a focused source of instability or suspicious behavior.",
+                "actions": [
+                    f"Filter the evidence table to host group `{top_host}` first.",
+                    "Compare whether the same host is also driving disagreement, drift, or repeated event patterns.",
+                    "If this host group maps to one device, service, or environment, validate configuration changes and traffic expectations there before widening the investigation.",
+                ],
+                "signals": [
+                    f"Top host group: {top_host}",
+                    f"Host share of anomalies: {_pct_text(host_share)}",
+                ],
+            }
+        )
+        immediate_actions.append(f"Start with host group `{top_host}`. The analytics suggest that is the fastest path to root cause.")
+        prevention_actions.append(f"If `{top_host}` is a known environment, improve source-specific baselining or collection hygiene there first.")
+
+    if event_share >= 0.35 and top_event != "none":
+        priorities.append(
+            {
+                "priority": "Medium",
+                "title": "A repeated event pattern is driving the run",
+                "summary": "One event signature is doing a large share of the anomaly work.",
+                "meaning": f"The event pattern `{top_event}` appears in {_pct_text(event_share)} of anomaly windows, which often points to one recurring workflow, parser edge case, or attack sequence.",
+                "actions": [
+                    f"Search the evidence rows for `{top_event}` and review whether the surrounding raw lines have the same operational story.",
+                    "Decide whether the pattern is malicious, misconfigured, or simply a valid workflow that the baseline does not yet understand.",
+                    "If valid, consider normalizing or baselining this pattern rather than repeatedly re-investigating it.",
+                ],
+                "signals": [
+                    f"Top event signature: {top_event}",
+                    f"Event share of anomalies: {_pct_text(event_share)}",
+                ],
+            }
+        )
+        prevention_actions.append(f"If `{top_event}` is legitimate traffic, normalize that event family or adjust baselining so it stops generating repetitive investigation cost.")
+
+    if labeled_windows and report_accuracy is not None and baseline_accuracy is not None and float(report_accuracy) > float(baseline_accuracy):
+        priorities.append(
+            {
+                "priority": "Medium",
+                "title": "The improved model is adding useful signal",
+                "summary": "This run suggests the argument-aware model is the more trustworthy guide.",
+                "meaning": f"Apex Insight accuracy is {_score_text(report_accuracy)} versus {_score_text(baseline_accuracy)} for the baseline on labeled windows.",
+                "actions": [
+                    "When reviewing this run, give extra attention to windows that only the improved model flags.",
+                    "Use the improved-model evidence as the primary explanation path in your report/export narrative.",
+                    "If the baseline underperforms repeatedly on similar runs, treat that as a reason to rely less on single-sequence-only interpretation.",
+                ],
+                "signals": [
+                    f"Apex accuracy: {_score_text(report_accuracy)}",
+                    f"Baseline accuracy: {_score_text(baseline_accuracy)}",
+                    f"Labeled windows: {labeled_windows}",
+                ],
+            }
+        )
+        meaning_points.append("On this run, the argument-aware model appears to be extracting more reliable context than the baseline alone.")
+
+    if attack_categories:
+        attack_name, attack_count = attack_categories[0]
+        watch_items.append(f"The strongest saved attack category signal is `{attack_name}` across {attack_count} anomaly windows. Use that as a working hypothesis, not a final verdict.")
+
+    if source in {"upload", "text"}:
+        prevention_actions.append("If the source came from manual upload or pasted text, standardize formatting and token consistency before the next run to reduce parser-driven noise.")
+    if "saved_path" in metadata:
+        watch_items.append("Because this run came from a saved file path, compare later runs from the same path to see whether the anomaly family is persistent or one-off.")
+
+    if not priorities:
+        priorities.append(
+            {
+                "priority": "Medium",
+                "title": "Use this run as a review baseline",
+                "summary": "There is enough information here to guide follow-up, but no single dominant risk pattern is overwhelming the run.",
+                "meaning": "The strongest value is comparative: use host, event, and disagreement filters to establish what is normal for this source and what meaningfully deviates later.",
+                "actions": [
+                    "Review the highest-score windows first.",
+                    "Check whether anomalies cluster by host or event family.",
+                    "Save a PDF report for comparison against future runs from the same source.",
+                ],
+                "signals": [
+                    f"Windows analyzed: {window_count}",
+                    f"Agreement: {_pct_text(agreement_rate)}",
+                    f"Drift posture: {drift_status}",
+                ],
+            }
+        )
+
+    priority_weight = {"High": 0, "Medium": 1, "Low": 2}
+    priorities = sorted(priorities, key=lambda entry: priority_weight.get(entry["priority"], 3))[:4]
+
+    overview = " ".join(meaning_points[:3]).strip() or "This archived run is ready for guided review."
+    return {
+        "headline": priorities[0]["title"] if priorities else "Guided review available",
+        "overview": overview,
+        "priorities": priorities,
+        "tabs": [
+            {
+                "id": "meaning",
+                "label": "Meaning",
+                "intro": "What the analytics are telling you about this run.",
+                "items": meaning_points or ["Use the anomaly counts, agreement, and drift posture together rather than in isolation."],
+            },
+            {
+                "id": "immediate",
+                "label": "Immediate Actions",
+                "intro": "Practical next steps to move from detection into investigation.",
+                "items": immediate_actions[:5] or ["Start with anomaly-heavy windows and narrow by host group or disagreement first."],
+            },
+            {
+                "id": "prevention",
+                "label": "Prevention",
+                "intro": "What could reduce repeat anomalies or shorten future investigations.",
+                "items": prevention_actions[:5] or ["Capture source context and normalize recurring benign patterns so future runs are easier to interpret."],
+            },
+            {
+                "id": "watch",
+                "label": "Watch Next",
+                "intro": "Signals worth monitoring in the next run or live session.",
+                "items": watch_items[:5] or ["Watch whether the same host group, event token, or disagreement pattern returns in future runs."],
+            },
+        ],
     }
 
 
@@ -1072,7 +1338,7 @@ def api_feedback():
 def api_run_detail(run_id: str):
     user = current_user()
     run = _run_by_id(int(user["id"]), run_id)
-    return jsonify({"run": {**_run_summary(run), "result": run["result"]}})
+    return jsonify({"run": {**_run_summary(run), "result": run["result"], "recommendations": _build_run_recommendations(run)}})
 
 
 @app.route("/api/live/start", methods=["POST"])

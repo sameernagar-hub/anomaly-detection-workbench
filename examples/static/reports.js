@@ -26,6 +26,7 @@
     reportType: defaults.report_type || "analysis",
     sourceId: defaults.source_id || "",
     renderer: defaults.renderer || Object.entries({ ...initialRenderers, ...(initialCatalog.renderers || {}) }).find(([, entry]) => entry.available)?.[0] || "weasyprint",
+    previewNonce: Date.now(),
   };
 
   function selectedType() {
@@ -86,6 +87,7 @@
   function previewUrl() {
     const params = new URLSearchParams({ report_type: state.reportType, renderer: state.renderer, theme: document.body.dataset.theme || ui.bootstrap.preferences?.theme || "campus" });
     if (state.sourceId) params.set("source_id", state.sourceId);
+    params.set("preview_nonce", String(state.previewNonce));
     return `/reports/preview?${params.toString()}`;
   }
 
@@ -102,9 +104,13 @@
   function refreshPreview() {
     const type = selectedType();
     const rendererLabel = (state.catalog.renderers || {})[state.renderer]?.label || state.renderer;
+    state.previewNonce = Date.now();
     els.reportDescription.textContent = type?.description || "Select a report configuration to preview the generated report.";
     els.reportSourceHint.textContent = `${rendererLabel} preview is embedded below as a real PDF and will follow the active workspace theme.`;
-    els.reportPreviewFrame.src = previewUrl();
+    els.reportPreviewFrame.src = "about:blank";
+    window.requestAnimationFrame(() => {
+      els.reportPreviewFrame.src = previewUrl();
+    });
     updateTopline();
   }
 

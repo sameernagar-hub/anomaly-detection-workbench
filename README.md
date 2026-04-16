@@ -33,7 +33,7 @@ This repository combines a small reusable sequence-model package with a larger F
 - compare a baseline sequence model against an argument-aware model
 - watch a growing file or replay stream through the live monitoring service
 - save account-scoped runs and revisit them later in the run archive
-- generate theme-aware reports with embedded PDF preview using either WeasyPrint or ReportLab
+- generate theme-aware reports with embedded PDF preview using two pure-Python PDF approaches: `Studio Canvas` and `Executive Brief`
 - submit ratings, questions, ideas, and bug notes through an in-app feedback service with user-linked records
 - export saved runs as JSON, CSV, HTML, or renderer-specific PDF
 - manage profile settings, avatar uploads, theme preferences, and default analysis mode
@@ -128,7 +128,7 @@ The root route opens the access flow first. After sign-in and any required human
 | `FAQ / Docs` | Explains services, metrics, workflows, and troubleshooting | In-app documentation |
 | `Run Archive` | Lists saved runs for the active account | Account-scoped run history |
 | `Feedback Service` | Captures user-linked ratings, questions, bug notes, and suggestions | Saved feedback records |
-| `Run Details` | Opens one archived run | Frozen charts, evidence table, exports |
+| `Run Details` | Opens one archived run | Frozen charts, evidence table, exports, guided recommendations |
 | `Profile Service` | Manages account identity, avatar, and defaults | Personalized settings |
 
 ---
@@ -256,14 +256,31 @@ The Reports service gives the workbench a dedicated report workspace:
 
 - choose a saved analysis run, the latest evaluation snapshot, or the current live-monitor result
 - preview the real embedded PDF for the selected renderer before downloading
-- switch between `WeasyPrint Atelier` and `ReportLab Executive`
+- switch between `Studio Canvas` and `Executive Brief`
 - inherit the active workspace theme so exported PDFs follow `campus`, `midnight`, or `signal`
 - keep long evidence values readable by moving oversized raw fields into appendix-style report sections
+- use cache-busted embedded preview refresh so renderer, source, and theme changes load a fresh PDF instead of reusing a stale frame
 
 Renderer notes:
 
-- `WeasyPrint` uses the HTML-to-PDF path and emphasizes a document-style layout
-- `ReportLab` uses a direct vector PDF layout with a more structured report format
+- `Studio Canvas`
+  A pure-Python editorial PDF with a presentation-first layout, richer cover treatment, and a more narrative visual flow.
+- `Executive Brief`
+  A pure-Python boardroom-style PDF with structured briefing blocks, compact metric framing, and executive review emphasis.
+
+---
+
+## Run Details Guidance
+
+The Run Details page is more than a frozen archive view. It now includes a guided-response sidebar that helps translate saved analytics into action:
+
+- explain what the current anomaly pattern means in user-facing language
+- highlight the highest-priority interpretation signals
+- suggest immediate investigation steps
+- suggest prevention-oriented follow-up actions
+- identify what to watch in future runs or live sessions
+
+The guidance is derived from saved anomaly counts, drift posture, model agreement, host concentration, repeated event signatures, labeled-window metrics, and archived metadata.
 
 ---
 

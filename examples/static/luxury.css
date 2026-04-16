@@ -155,15 +155,21 @@ textarea {
 .site-header,
 .page-shell {
   position: relative;
-  z-index: 1;
   width: min(1440px, calc(100% - 40px));
   margin: 0 auto;
 }
 
 .site-header {
+  z-index: 20;
   display: grid;
   gap: 14px;
   padding: 22px 0 16px;
+  position: relative;
+  isolation: isolate;
+}
+
+.page-shell {
+  z-index: 1;
 }
 
 .header-primary {
@@ -172,6 +178,8 @@ textarea {
   justify-content: space-between;
   gap: 18px;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 3;
 }
 
 .brand-lockup {
@@ -212,6 +220,8 @@ textarea {
 }
 
 .top-nav-shell {
+  position: relative;
+  z-index: 1;
   border: var(--border-width) solid var(--line);
   border-radius: var(--radius-xl);
   background: var(--panel);
@@ -1223,6 +1233,119 @@ code {
   transform: translateY(-2px);
   border-color: var(--line-strong);
   box-shadow: var(--shadow-soft);
+}
+
+.advisory-section,
+.advisory-priority-list,
+.advisory-tabs,
+.advisory-panels {
+  display: grid;
+  gap: 14px;
+}
+
+.advisory-hero {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  border: var(--border-width) solid var(--line);
+  background:
+    linear-gradient(135deg, var(--accent-soft), transparent 62%),
+    linear-gradient(180deg, var(--panel), var(--panel-strong));
+  box-shadow: var(--shadow-soft);
+}
+
+.advisory-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  border: var(--border-width) solid var(--line);
+  background: linear-gradient(180deg, var(--panel), var(--panel-strong));
+  box-shadow: var(--shadow-soft);
+}
+
+.advisory-card.priority-high {
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--line-strong));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--warn) 12%, transparent), transparent 54%),
+    linear-gradient(180deg, var(--panel), var(--panel-strong));
+}
+
+.advisory-card.priority-medium {
+  border-color: var(--line-strong);
+}
+
+.advisory-card-top {
+  display: grid;
+  gap: 8px;
+}
+
+.advisory-card-top strong,
+.advisory-copy-block strong {
+  font-size: 1.02rem;
+  line-height: 1.35;
+}
+
+.advisory-card p,
+.advisory-panel-intro {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.advisory-copy-block {
+  display: grid;
+  gap: 8px;
+}
+
+.advisory-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.advisory-signals span {
+  border-radius: var(--radius-pill);
+  border: var(--border-width) solid var(--line);
+  padding: 8px 11px;
+  background: var(--panel-strong);
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.advisory-tabs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.advisory-panels {
+  gap: 0;
+}
+
+.advisory-panel {
+  display: none;
+  gap: 12px;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  border: var(--border-width) solid var(--line);
+  background: linear-gradient(180deg, var(--panel), var(--panel-strong));
+  box-shadow: var(--shadow-soft);
+}
+
+.advisory-panel.active {
+  display: grid;
+}
+
+.advisory-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 10px;
+  line-height: 1.6;
+}
+
+.advisory-list li::marker {
+  color: var(--accent);
 }
 
 .docs-stack {
