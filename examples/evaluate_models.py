@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
-from workbench import AnomalyWorkbench
+from workbench import AnomalyWorkbench, load_records_from_file
 
 
 def print_metric_block(name: str, metrics: dict) -> None:
@@ -29,7 +29,21 @@ def main() -> None:
     evaluation_records = test_normal + test_attack
     result = workbench.predict_records(evaluation_records)
 
-    print("Standard evaluation")
+    unseen_records = load_records_from_file(BASE_DIR / "sample_data" / "unseen_shift.log")
+    unseen_result = workbench.predict_records(unseen_records)
+
+    print("Unseen Synthetic System-Log Evaluation")
+    print(json.dumps({
+        "window_count": unseen_result["summary"]["window_count"],
+        "distinct_host_groups": unseen_result["summary"]["distinct_host_groups"],
+        "agreement_rate": unseen_result["summary"]["agreement_rate"],
+        "drift": unseen_result["summary"]["drift"],
+        "adaptive_threshold": unseen_result["summary"]["adaptive_threshold"],
+    }, indent=2))
+    print_metric_block("DeepLog baseline", unseen_result["summary"]["deeplog_metrics"])
+    print_metric_block("Argument-aware report model", unseen_result["summary"]["report_metrics"])
+
+    print("\nSanitized same-source holdout")
     print(json.dumps({
         "window_count": result["summary"]["window_count"],
         "distinct_host_groups": result["summary"]["distinct_host_groups"],

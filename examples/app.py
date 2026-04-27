@@ -64,6 +64,8 @@ FEEDBACK_CATEGORIES = {
     "general": "General feedback",
 }
 
+UNSEEN_EVALUATION_FILE = SAMPLE_DIR / "unseen_shift.log"
+
 SAMPLE_SCENARIOS = [
     {
         "id": "executive-brief",
@@ -101,7 +103,7 @@ SAMPLE_SCENARIOS = [
 
 workbench = AnomalyWorkbench(BASE_DIR)
 BOOTSTRAP_STATUS: Dict[str, Any] = {"state": "starting", "message": "Preparing anomaly detection services...", "details": {}}
-EVALUATION_CACHE: Dict[str, Any] = {"state": "idle", "message": "Evaluation snapshot has not run yet.", "updated_at": None, "benchmark": None}
+EVALUATION_CACHE: Dict[str, Any] = {"state": "idle", "message": "Unseen synthetic system-log benchmark snapshot has not run yet.", "updated_at": None, "benchmark": None}
 BOOTSTRAP_LOCK = threading.Lock()
 BOOTSTRAP_THREAD: Optional[threading.Thread] = None
 EVALUATION_THREAD: Optional[threading.Thread] = None
@@ -649,11 +651,13 @@ def _user_bootstrap(page: str, extras: Optional[Dict[str, Any]] = None) -> Dict[
 
 def _build_benchmark_payload() -> Dict[str, Any]:
     train_normal, test_normal, test_attack = workbench._training_records()
-    evaluation_records = test_normal + test_attack
-    result = workbench.predict_records(evaluation_records)
+    evaluation_records = load_records_from_file(UNSEEN_EVALUATION_FILE)
+    unseen_result = workbench.predict_records(evaluation_records)
+    same_source_records = test_normal + test_attack
+    same_source_result = workbench.predict_records(same_source_records)
     cross_host = workbench.evaluate_cross_host_proxy()
 
-    summary = result["summary"]
+    summary = unseen_result["summary"]
     baseline_metrics = summary.get("deeplog_metrics", {})
     improved_metrics = summary.get("report_metrics", {})
     metric_names = ("accuracy", "precision", "recall", "f1", "false_positive_rate")
@@ -700,6 +704,7 @@ def _build_benchmark_payload() -> Dict[str, Any]:
 
     return {
         "standard": {"summary": summary, "metric_rows": metric_rows},
+        "same_source": {"summary": same_source_result["summary"], "metric_rows": []},
         "cross_host": {"note": cross_host.get("note"), "summary": cross_summary, "folds": folds},
         "headline": headline,
     }

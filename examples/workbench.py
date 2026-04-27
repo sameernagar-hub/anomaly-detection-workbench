@@ -35,7 +35,8 @@ DRIFT_ALERT_THRESHOLD = 0.2
 DEFAULT_REPORT_THRESHOLD = 0.5
 ADAPT_BLEND = 0.35
 
-KEY_FIELDS = ("proto", "service", "state", "attack_cat")
+# Remove attack_cat from feature inputs to prevent label leakage.
+KEY_FIELDS = ("proto", "service", "state")
 NUMERIC_FIELDS = (
     "dur",
     "spkts",
@@ -438,7 +439,14 @@ class AnomalyWorkbench:
                 embedding_dim=meta["embedding_dim"],
             )
             state_dict = torch.load(self.report_model_path, map_location=self.device)
-            model.load_state_dict(state_dict)
+            try:
+                model.load_state_dict(state_dict)
+            except Exception:
+                # Existing artifact no longer matches the current feature pipeline.
+                self.report_model_path.unlink(missing_ok=True)
+                self.report_meta_path.unlink(missing_ok=True)
+                self._train_report_model()
+                return
             model.eval()
             if "threshold" not in meta:
                 train_normal, test_normal, test_attack = self._training_records()

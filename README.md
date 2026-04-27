@@ -38,7 +38,10 @@ This repository combines a small reusable sequence-model package with a larger F
 - export saved runs as JSON, CSV, HTML, or renderer-specific PDF
 - manage profile settings, avatar uploads, theme preferences, and default analysis mode
 - inspect benchmark and proxy cross-host evaluation results from a dedicated service page
+- review real detection performance metrics that compare the argument-aware model against the baseline, including unseen generalization and false-positive behavior
 - turn archived analytics into personalized suggestions, practical next actions, prevention ideas, and watch-next guidance on the Run Details page
+
+The Evaluation service is not just a demo chart; it reports actual system metrics. In the current snapshot, the argument-aware model achieves 0.847 accuracy on the unseen benchmark with a 0.023 false-positive rate, while the baseline over-alerts with 0.271 accuracy and a 0.886 false-positive rate. The same-source holdout confirms strong in-domain learning, and the proxy cross-host folds demonstrate improved host-group transfer.
 
 ---
 

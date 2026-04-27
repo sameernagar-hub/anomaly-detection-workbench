@@ -109,25 +109,12 @@
       "INT": 4,
       "REQ": 5,
       "RST": 6
-    },
-    "attack_cat": {
-      "__UNK__": 0,
-      "Analysis": 1,
-      "Backdoor": 2,
-      "DoS": 3,
-      "Exploits": 4,
-      "Fuzzers": 5,
-      "Normal": 6,
-      "Reconnaissance": 7,
-      "Shellcode": 8,
-      "Worms": 9
     }
   },
   "key_vocab_sizes": {
     "proto": 85,
     "service": 11,
-    "state": 7,
-    "attack_cat": 10
+    "state": 7
   },
   "scaler": {
     "dur": {
