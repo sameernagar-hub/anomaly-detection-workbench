@@ -3,6 +3,7 @@
   const defaults = ui.bootstrap.report_defaults || {};
   const initialCatalog = ui.bootstrap.report_catalog || { types: [], renderers: {} };
   const initialRenderers = ui.bootstrap.report_renderers || {};
+  const rendererOrder = ["weasyprint", "reportlab"];
 
   const els = {
     reportTypeCount: document.getElementById("reportTypeCount"),
@@ -11,26 +12,49 @@
     activeReportLabel: document.getElementById("activeReportLabel"),
     reportTypeSelect: document.getElementById("reportTypeSelect"),
     reportSourceSelect: document.getElementById("reportSourceSelect"),
-    rendererGrid: document.getElementById("rendererGrid"),
     reportDescription: document.getElementById("reportDescription"),
     reportSourceHint: document.getElementById("reportSourceHint"),
     refreshReportCatalog: document.getElementById("refreshReportCatalog"),
-    openPreviewTabBtn: document.getElementById("openPreviewTabBtn"),
-    downloadPdfBtn: document.getElementById("downloadPdfBtn"),
-    reportPreviewFrame: document.getElementById("reportPreviewFrame"),
-    selectedRendererPill: document.getElementById("selectedRendererPill"),
+    reportPreviewGrid: document.getElementById("reportPreviewGrid"),
   };
 
   const state = {
     catalog: { types: [], renderers: { ...initialRenderers, ...(initialCatalog.renderers || {}) } },
     reportType: defaults.report_type || "analysis",
     sourceId: defaults.source_id || "",
-    renderer: defaults.renderer || Object.entries({ ...initialRenderers, ...(initialCatalog.renderers || {}) }).find(([, entry]) => entry.available)?.[0] || "weasyprint",
     previewNonce: Date.now(),
   };
 
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#39;",
+    }[char]));
+  }
+
   function selectedType() {
     return (state.catalog.types || []).find((entry) => entry.id === state.reportType) || state.catalog.types?.[0] || null;
+  }
+
+  function selectedSource() {
+    const type = selectedType();
+    return (type?.sources || []).find((entry) => String(entry.id) === String(state.sourceId)) || null;
+  }
+
+  function rendererEntries() {
+    const renderers = state.catalog.renderers || {};
+    return rendererOrder.map((id) => [id, renderers[id] || { label: id, available: false, detail: "Renderer status is not available." }]);
+  }
+
+  function currentTheme() {
+    return document.body.dataset.theme || ui.bootstrap.preferences?.theme || "campus";
+  }
+
+  function currentSourceLabel() {
+    return selectedSource()?.label || els.reportSourceSelect.options[els.reportSourceSelect.selectedIndex]?.text || "selected source";
   }
 
   function updateTopline() {
@@ -42,13 +66,12 @@
     els.reportRunCount.textContent = String(runs.length || 0);
     els.rendererReadyCount.textContent = `${readyCount}/${Object.keys(renderers).length || 0}`;
     els.activeReportLabel.textContent = selectedType()?.label || "Report";
-    els.selectedRendererPill.textContent = renderers[state.renderer]?.label || state.renderer;
   }
 
   function renderTypeSelect() {
     const types = state.catalog.types || [];
     els.reportTypeSelect.innerHTML = types.map((entry) => `
-      <option value="${entry.id}" ${entry.id === state.reportType ? "selected" : ""}>${entry.label}</option>
+      <option value="${escapeHtml(entry.id)}" ${entry.id === state.reportType ? "selected" : ""}>${escapeHtml(entry.label)}</option>
     `).join("");
     if (!types.some((entry) => entry.id === state.reportType) && types[0]) {
       state.reportType = types[0].id;
@@ -62,6 +85,7 @@
       els.reportSourceSelect.innerHTML = '<option value="">No sources ready</option>';
       els.reportSourceSelect.disabled = true;
       state.sourceId = "";
+      els.reportSourceHint.textContent = type?.description || "No source is ready for this report yet.";
       return;
     }
     if (!sources.some((entry) => String(entry.id) === String(state.sourceId))) {
@@ -69,48 +93,80 @@
     }
     els.reportSourceSelect.disabled = false;
     els.reportSourceSelect.innerHTML = sources.map((entry) => `
-      <option value="${entry.id}" ${String(entry.id) === String(state.sourceId) ? "selected" : ""}>${entry.label}</option>
+      <option value="${escapeHtml(entry.id)}" ${String(entry.id) === String(state.sourceId) ? "selected" : ""}>${escapeHtml(entry.label)}</option>
     `).join("");
-    els.reportSourceHint.textContent = sources.find((entry) => String(entry.id) === String(state.sourceId))?.detail || type?.description || "";
+    els.reportSourceHint.textContent = selectedSource()?.detail || type?.description || "";
   }
 
-  function renderRendererGrid() {
-    const renderers = state.catalog.renderers || {};
-    els.rendererGrid.innerHTML = Object.entries(renderers).map(([id, entry]) => `
-      <button class="renderer-card ${state.renderer === id ? "active" : ""} ${entry.available ? "" : "disabled"}" type="button" data-renderer="${id}" ${entry.available ? "" : "disabled"}>
-        <strong>${entry.label}</strong>
-        <span>${entry.detail}</span>
-      </button>
-    `).join("");
-  }
-
-  function previewUrl() {
-    const params = new URLSearchParams({ report_type: state.reportType, renderer: state.renderer, theme: document.body.dataset.theme || ui.bootstrap.preferences?.theme || "campus" });
+  function previewUrl(renderer) {
+    const params = new URLSearchParams({
+      report_type: state.reportType,
+      renderer,
+      theme: currentTheme(),
+      preview_nonce: String(state.previewNonce),
+    });
     if (state.sourceId) params.set("source_id", state.sourceId);
-    params.set("preview_nonce", String(state.previewNonce));
     return `/reports/preview?${params.toString()}`;
   }
 
-  function downloadUrl() {
+  function embeddedPreviewUrl(renderer) {
+    return `${previewUrl(renderer)}#page=1&zoom=page-width&toolbar=0&navpanes=0`;
+  }
+
+  function downloadUrl(renderer) {
     const params = new URLSearchParams({
       report_type: state.reportType,
-      renderer: state.renderer,
-      theme: document.body.dataset.theme || ui.bootstrap.preferences?.theme || "campus",
+      renderer,
+      theme: currentTheme(),
     });
     if (state.sourceId) params.set("source_id", state.sourceId);
     return `/api/reports/download.pdf?${params.toString()}`;
   }
 
-  function refreshPreview() {
+  function updateRendererCards() {
+    rendererEntries().forEach(([id, entry]) => {
+      const available = Boolean(entry.available);
+      const card = els.reportPreviewGrid.querySelector(`[data-renderer-card="${id}"]`);
+      if (!card) return;
+      const stateLabel = card.querySelector(`[data-renderer-state="${id}"]`);
+      const pill = card.querySelector(`[data-renderer-pill="${id}"]`);
+      const detail = card.querySelector(`[data-renderer-detail="${id}"]`);
+      const frame = card.querySelector(`[data-renderer-frame="${id}"]`);
+      const unavailable = card.querySelector(`[data-renderer-unavailable="${id}"]`);
+      const actions = card.querySelectorAll("[data-report-action]");
+
+      card.classList.toggle("unavailable", !available);
+      if (stateLabel) stateLabel.textContent = available ? "Preview online" : "Preview unavailable";
+      if (pill) pill.textContent = available ? "Ready" : "Offline";
+      if (detail) detail.textContent = entry.detail || "";
+      actions.forEach((button) => {
+        button.disabled = !available;
+      });
+
+      if (frame) {
+        frame.hidden = !available;
+        if (!available) frame.removeAttribute("src");
+      }
+      if (unavailable) {
+        unavailable.hidden = available;
+        unavailable.textContent = entry.detail || "This renderer is not available.";
+      }
+    });
+  }
+
+  function refreshPreviews() {
     const type = selectedType();
-    const rendererLabel = (state.catalog.renderers || {})[state.renderer]?.label || state.renderer;
-    const sourceLabel = els.reportSourceSelect.options[els.reportSourceSelect.selectedIndex]?.text || "selected source";
+    const sourceLabel = currentSourceLabel();
     state.previewNonce = Date.now();
     els.reportDescription.textContent = type?.description || "Select a report configuration to preview the generated report.";
-    els.reportSourceHint.textContent = `${rendererLabel} is rendering a live PDF preview for ${sourceLabel} and will follow the active workspace theme.`;
-    els.reportPreviewFrame.src = "about:blank";
-    window.requestAnimationFrame(() => {
-      els.reportPreviewFrame.src = previewUrl();
+    els.reportSourceHint.textContent = selectedSource()?.detail || `Both previews are rendering ${sourceLabel} with the active workspace theme.`;
+
+    updateRendererCards();
+    rendererEntries().forEach(([id, entry]) => {
+      const card = els.reportPreviewGrid.querySelector(`[data-renderer-card="${id}"]`);
+      const frame = card?.querySelector("[data-renderer-frame]");
+      if (!entry.available || !frame) return;
+      frame.src = embeddedPreviewUrl(id);
     });
     updateTopline();
   }
@@ -118,8 +174,7 @@
   function syncUI() {
     renderTypeSelect();
     renderSourceSelect();
-    renderRendererGrid();
-    refreshPreview();
+    refreshPreviews();
   }
 
   async function refreshCatalog() {
@@ -139,15 +194,7 @@
 
   els.reportSourceSelect.addEventListener("change", (event) => {
     state.sourceId = event.target.value;
-    refreshPreview();
-  });
-
-  els.rendererGrid.addEventListener("click", (event) => {
-    const card = event.target.closest("[data-renderer]");
-    if (!card || card.disabled) return;
-    state.renderer = card.dataset.renderer;
-    renderRendererGrid();
-    refreshPreview();
+    syncUI();
   });
 
   els.refreshReportCatalog.addEventListener("click", async () => {
@@ -158,16 +205,21 @@
     }
   });
 
-  els.openPreviewTabBtn.addEventListener("click", () => {
-    window.open(previewUrl(), "_blank");
-  });
-
-  els.downloadPdfBtn.addEventListener("click", () => {
-    ui.openExport(downloadUrl());
+  els.reportPreviewGrid.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-report-action]");
+    if (!button || button.disabled) return;
+    const renderer = button.dataset.renderer;
+    if (button.dataset.reportAction === "open") {
+      window.open(previewUrl(renderer), "_blank");
+      return;
+    }
+    if (button.dataset.reportAction === "download") {
+      ui.openExport(downloadUrl(renderer));
+    }
   });
 
   window.addEventListener("adw:theme-change", () => {
-    refreshPreview();
+    refreshPreviews();
   });
 
   state.catalog = {

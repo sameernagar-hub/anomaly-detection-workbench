@@ -13,7 +13,7 @@ from pathlib import Path
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
-from flask import Flask, Response, abort, flash, jsonify, redirect, render_template, request, send_file, url_for
+from flask import Flask, Response, abort, flash, jsonify, make_response, redirect, render_template, request, send_file, url_for
 from werkzeug.utils import secure_filename
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -98,6 +98,14 @@ SAMPLE_SCENARIOS = [
         "eyebrow": "Model comparison",
         "description": "A curated sequence that highlights disagreement windows, mixed labels, and metric deltas between the two models.",
         "tags": ["disagreement", "benchmark", "comparison"],
+    },
+    {
+        "id": "unseen-shift",
+        "filename": "unseen_shift.log",
+        "title": "Unseen Shift Benchmark",
+        "eyebrow": "Held-out benchmark",
+        "description": "The unseen synthetic evaluation stream used by the Evaluation service, exposed here for direct analysis, replay, and download.",
+        "tags": ["unseen", "benchmark", "drift"],
     },
 ]
 
@@ -1021,12 +1029,12 @@ def evaluation_page() -> str:
 @app.route("/reports")
 @login_required
 @workbench_ready_required
-def reports_page() -> str:
+def reports_page() -> Response:
     user = current_user()
     report_type = str(request.args.get("report_type", "analysis")).strip() or "analysis"
     source_id = str(request.args.get("source_id") or request.args.get("run_id") or "").strip()
     renderer = str(request.args.get("renderer", "weasyprint")).strip() or "weasyprint"
-    return render_template(
+    response = make_response(render_template(
         "reports.html",
         active_page="reports",
         bootstrap_data=_user_bootstrap(
@@ -1037,7 +1045,9 @@ def reports_page() -> str:
                 "report_catalog": report_catalog(**_report_preview_context(int(user["id"]))),
             },
         ),
-    )
+    ))
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    return response
 
 
 @app.route("/reports/preview")

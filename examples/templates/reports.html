@@ -60,23 +60,13 @@
         </div>
       </div>
 
-      <div class="section-head compact-head">
-        <div>
-          <div class="eyebrow">Renderer service</div>
-          <h2>Choose the PDF engine</h2>
-        </div>
-      </div>
-      <div class="renderer-grid" id="rendererGrid"></div>
-
       <div class="status-stack">
         <div class="status-blade" id="reportDescription">Select a report type to see what will be included.</div>
-        <div class="status-blade subtle" id="reportSourceHint">Choose a source and compare the actual embedded PDF output from each renderer before download.</div>
+        <div class="status-blade subtle" id="reportSourceHint">Choose a source to refresh both embedded PDF previews.</div>
       </div>
 
       <div class="control-row wrap">
         <button class="ghost" id="refreshReportCatalog">Refresh catalog</button>
-        <button class="ghost" id="openPreviewTabBtn">Open preview in tab</button>
-        <button class="primary" id="downloadPdfBtn">Download PDF</button>
       </div>
     </section>
 
@@ -84,18 +74,55 @@
       <div class="section-head">
         <div>
           <div class="eyebrow">Preview workspace</div>
-          <h2>Embedded PDF preview</h2>
+          <h2>Embedded PDF previews</h2>
         </div>
         <div class="section-actions">
-          <span class="pill-label" id="selectedRendererPill">Studio Canvas</span>
+          <span class="pill-label">Studio Canvas</span>
+          <span class="pill-label">Executive Brief</span>
         </div>
       </div>
-      <div class="report-preview-shell">
-        <iframe id="reportPreviewFrame" title="Report preview workspace"></iframe>
+      <div class="report-preview-grid" id="reportPreviewGrid">
+        <article class="report-renderer-preview" data-renderer-card="weasyprint">
+          <header class="report-renderer-header">
+            <div>
+              <div class="eyebrow" data-renderer-state="weasyprint">Preview loading</div>
+              <h3>Studio Canvas</h3>
+            </div>
+            <span class="pill-label" data-renderer-pill="weasyprint">Checking</span>
+          </header>
+          <div class="report-renderer-detail" data-renderer-detail="weasyprint">WeasyPrint PDF layout with structured sections and full-page styling.</div>
+          <div class="report-renderer-actions control-row wrap">
+            <button class="ghost compact" type="button" data-report-action="open" data-renderer="weasyprint">Open preview</button>
+            <button class="primary compact" type="button" data-report-action="download" data-renderer="weasyprint">Download PDF</button>
+          </div>
+          <div class="report-preview-shell">
+            <iframe data-renderer-frame="weasyprint" title="Studio Canvas report preview"></iframe>
+            <div class="report-preview-unavailable" data-renderer-unavailable="weasyprint" hidden></div>
+          </div>
+        </article>
+
+        <article class="report-renderer-preview" data-renderer-card="reportlab">
+          <header class="report-renderer-header">
+            <div>
+              <div class="eyebrow" data-renderer-state="reportlab">Preview loading</div>
+              <h3>Executive Brief</h3>
+            </div>
+            <span class="pill-label" data-renderer-pill="reportlab">Checking</span>
+          </header>
+          <div class="report-renderer-detail" data-renderer-detail="reportlab">ReportLab PDF layout with compact sections and print-focused formatting.</div>
+          <div class="report-renderer-actions control-row wrap">
+            <button class="ghost compact" type="button" data-report-action="open" data-renderer="reportlab">Open preview</button>
+            <button class="primary compact" type="button" data-report-action="download" data-renderer="reportlab">Download PDF</button>
+          </div>
+          <div class="report-preview-shell">
+            <iframe data-renderer-frame="reportlab" title="Executive Brief report preview"></iframe>
+            <div class="report-preview-unavailable" data-renderer-unavailable="reportlab" hidden></div>
+          </div>
+        </article>
       </div>
     </section>
   </section>
 {% endblock %}
 {% block scripts %}
-  <script src="{{ url_for('static', filename='reports.js') }}"></script>
+  <script src="{{ url_for('static', filename='reports.js') }}?v=dual-previews-align"></script>
 {% endblock %}

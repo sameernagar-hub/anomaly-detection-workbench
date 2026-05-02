@@ -153,11 +153,11 @@ def render_pdf_reportlab(payload: Dict[str, Any]) -> bytes:
             top_bg = colors.HexColor(theme["paper_alt"])
 
         card = Table(
-            [[
-                _paragraph(metric.get("label", ""), styles["ExecLabel"]),
-                _paragraph(metric.get("value", ""), styles["ExecValue"]),
-                _paragraph(metric.get("detail", ""), styles["ExecMetricBody"]),
-            ]],
+            [
+                [_paragraph(metric.get("label", ""), styles["ExecLabel"])],
+                [_paragraph(metric.get("value", ""), styles["ExecValue"])],
+                [_paragraph(metric.get("detail", ""), styles["ExecMetricBody"])],
+            ],
             colWidths=[total_width / 4.0 - 6],
         )
         card.setStyle(
